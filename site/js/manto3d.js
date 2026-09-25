@@ -43,6 +43,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+if (window.__3dDiag) window.__3dDiag.marks.manto = 'init';
+
 /* ------------------------- 1. CONFIGURACIÓN ------------------------- */
 const ID_CONTENEDOR = 'manto3d-escena';
 const ID_CANVAS = 'manto-canvas';
@@ -68,6 +70,7 @@ try {
   throw e;
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+if (window.__3dDiag) window.__3dDiag.marks.manto = 'renderer-ok';
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 
@@ -410,6 +413,8 @@ function tick() {
 
   controles.update();
   renderer.render(escena, camara);
+  if (window.__3dDiag && !window.__3dDiag.marks.mantoFirstFrame) { window.__3dDiag.marks.mantoFirstFrame = 'first-frame'; }
+  if (window.__3dDiag) window.__3dDiag.marks.mantoFrames = (window.__3dDiag.marks.mantoFrames || 0) + 1;
 }
 
 /* ------------------------- 10. TAMAÑO Y VISIBILIDAD ------------------------- */

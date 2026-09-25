@@ -25,6 +25,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+if (window.__3dDiag) window.__3dDiag.marks.flor = 'init';
+
 /* ------------------------- 1. CONFIGURACIÓN ------------------------- */
 const ID_CONTENEDOR = 'flor3d-escena';
 const ID_CANVAS = 'flor3d-canvas';
@@ -62,6 +64,7 @@ try {
   throw e;
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+if (window.__3dDiag) window.__3dDiag.marks.flor = 'renderer-ok';
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 
@@ -426,6 +429,8 @@ function tick() {
 
   controles.update();
   renderer.render(escena, camara);
+  if (window.__3dDiag && !window.__3dDiag.marks.florFirstFrame) { window.__3dDiag.marks.florFirstFrame = 'first-frame'; }
+  if (window.__3dDiag) window.__3dDiag.marks.florFrames = (window.__3dDiag.marks.florFrames || 0) + 1;
 }
 
 /* ------------------------- 9. TAMAÑO Y VISIBILIDAD ------------------------- */

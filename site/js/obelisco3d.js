@@ -28,6 +28,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+if (window.__3dDiag) window.__3dDiag.marks.obelisco = 'init';
+
 /* ------------------------- 1. CONFIGURACIÓN ------------------------- */
 const ID_CONTENEDOR = 'obelisco3d-escena';
 const ID_CANVAS = 'obelisco-canvas';
@@ -53,6 +55,7 @@ try {
   throw e;
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+if (window.__3dDiag) window.__3dDiag.marks.obelisco = 'renderer-ok';
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 
@@ -355,6 +358,8 @@ function tick() {
 
   controles.update();
   renderer.render(escena, camara);
+  if (window.__3dDiag && !window.__3dDiag.marks.obeliscoFirstFrame) { window.__3dDiag.marks.obeliscoFirstFrame = 'first-frame'; }
+  if (window.__3dDiag) window.__3dDiag.marks.obeliscoFrames = (window.__3dDiag.marks.obeliscoFrames || 0) + 1;
 }
 
 /* ------------------------- 8. TAMAÑO Y VISIBILIDAD ------------------------- */
