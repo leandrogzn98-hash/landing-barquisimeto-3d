@@ -306,15 +306,24 @@
      Patrón por escena (aire Abeto: el scroll es el timeline):
        · ScrollTrigger fija el ".escena-stage" (100vh) en pantalla
          (pin, sin espacio extra: las tarjetas desfilan POR ENCIMA).
-       · Otro ScrollTrigger con scrub fija video.currentTime según el
-         progreso: el scroll AVANZA el clip como si dirigiera la cámara.
-         Los videos nunca se reproducen solos en la escena (van pausados);
-         el póster evita el flash negro antes de que carguen.
+       · En escritorio, otro ScrollTrigger con scrub fija video.currentTime
+         según el progreso: el scroll AVANZA el clip como si dirigiera la
+         cámara. Los videos nunca se reproducen solos en la escena.
+       · En táctil (hover: none) el scrub no es fiable: el video se
+         reproduce solo (silencio, loop) mientras su escena está visible.
+       · Los videos llevan póster del primer fotograma: evita el flash
+         negro antes de que carguen.
      Con "reducir movimiento" no se fija ni se anima nada: el contenido
      queda apilado en flujo normal, los videos muestran su primer
      fotograma y todo sigue legible.
   -------------------------------------------------------------------------- */
   if (!reduceMovimiento) {
+
+    // En pantallas táctiles el "scrub" cuadro a cuadro no es fiable
+    // (el navegador puede no pintar los saltos de currentTime en un video
+    // pausado): ahí el video se reproduce solo al entrar en escena.
+    // En escritorio (hover + puntero fino) el scroll dirige el clip.
+    var esTactil = window.matchMedia('(hover: none)').matches;
 
     // Fija un escenario en pantalla mientras su sección hace scroll.
     function fijarEscena(idSeccion, idStage) {
@@ -344,6 +353,27 @@
         tl.to(idVideoEscena, { opacity: 0.3, ease: 'none', duration: 0.2 }, 0.8);
       }
       return tl;
+    }
+
+    // Modo táctil: reproduce el video (en silencio, en loop) mientras su
+    // escena está en pantalla. No depende del scrub ni del fijado.
+    function reproducirAlVer(idSeccion, idVideo) {
+      var seccion = document.querySelector(idSeccion);
+      var video = document.getElementById(idVideo);
+      if (!seccion || !video) { return; }
+      video.loop = true;
+      var io = new IntersectionObserver(function (entradas) {
+        entradas.forEach(function (e) {
+          try {
+            if (e.intersectionRatio >= 0.2) {
+              video.play().catch(function () { /* autoplay bloqueado: noop */ });
+            } else {
+              video.pause();
+            }
+          } catch (err) { /* noop */ }
+        });
+      }, { threshold: [0, 0.2, 1] });
+      io.observe(seccion);
     }
 
     // El scroll dirige el video: progreso 0→1 mapea a tiempo 0→duración.
@@ -379,20 +409,23 @@
       });
     }
 
-    /* ---- 8.1 OBELISCO: órbita de dron dirigida por el scroll ---- */
+    /* ---- 8.1 OBELISCO: órbita de dron (scroll en escritorio, autoplay en táctil) ---- */
     fijarEscena('#escena-obelisco', '#obelisco-stage');
-    videoDirigidoPorScroll('#escena-obelisco', '#obelisco-video');
+    if (esTactil) { reproducirAlVer('#escena-obelisco', '#obelisco-video'); }
+    else { videoDirigidoPorScroll('#escena-obelisco', '#obelisco-video'); }
     disolverAlFinal('#escena-obelisco', '#obelisco-contenido', '#obelisco-video-escena')
       .to('.hint-obelisco', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
 
     /* ---- 8.2 FLOR: órbita aérea al atardecer ---- */
     fijarEscena('#escena-flor', '#flor-stage');
-    videoDirigidoPorScroll('#escena-flor', '#flor-video');
+    if (esTactil) { reproducirAlVer('#escena-flor', '#flor-video'); }
+    else { videoDirigidoPorScroll('#escena-flor', '#flor-video'); }
     disolverAlFinal('#escena-flor', '#flor-contenido', '#flor-video-escena');
 
     /* ---- 8.3 MANTO: travelling lateral frente a la Virgen ---- */
     fijarEscena('#escena-manto', '#manto-stage');
-    videoDirigidoPorScroll('#escena-manto', '#manto-video');
+    if (esTactil) { reproducirAlVer('#escena-manto', '#manto-video'); }
+    else { videoDirigidoPorScroll('#escena-manto', '#manto-video'); }
     disolverAlFinal('#escena-manto', '#manto-contenido', '#manto-video-escena')
       .to('.hint-manto', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
 
