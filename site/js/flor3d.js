@@ -1,17 +1,14 @@
 /* ============================================================================
    flor3d.js — La Flor de Venezuela REAL en 3D (Three.js)
    ----------------------------------------------------------------------------
-   Reescritura fiel al monumento de Fruto Vivas (ver foto de referencia):
-     · 16 PANELES METÁLICOS trapezoidales grandes, levemente curvados,
-       color acero (metalness 0.85, roughness 0.4) — NO pétalos orgánicos.
-     · Paneles montados en BRAZOS alrededor de una COLUMNA CENTRAL de acero
-       oscuro, sobre una PLATAFORMA circular.
-     · Cerrados (apertura 0) forman un capullo vertical; abiertos (apertura 1)
-       se despliegan ~75° hacia afuera.
-     · Núcleo: pistilos (cilindros pequeños con puntas emisivas).
-
-   Además: cielo crepuscular, sol bajo, partículas de polvo de luz, controles
-   orbitales con inercia y pausa del render fuera de pantalla.
+   Fiel a la foto aérea de referencia (monumento de Fruto Vivas):
+     · 16 PÉTALOS BLANCOS tipo VELA/LONA (mate, nada de cromo): anchos en la
+       base, afinando a puntas suaves y redondeadas, con curvatura de tela
+       que cae hacia afuera-abajo cuando la flor está ABIERTA.
+     · Debajo de los pétalos: EDIFICIO CIRCULAR DE VIDRIO con resplandor
+       cálido interior (como el pabellón real).
+     · Pétalos montados en brazos alrededor de una columna central clara,
+       sobre plataforma circular.
 
    Contrato (igual que obelisco3d.js y manto3d.js):
      · Módulo ES: importa 'three' y OrbitControls (importmap en index.html).
@@ -33,8 +30,8 @@ const ID_CONTENEDOR = 'flor3d-escena';
 const ID_CANVAS = 'flor3d-canvas';
 const ID_ERROR = 'flor3d-error';
 const TOTAL_PETALOS = 16;          // como la Flor de Venezuela real
-const ANGULO_CERRADO = -1.18;      // radianes: paneles hacia arriba (capullo)
-const ANGULO_ABIERTO = 0.13;       // radianes: ~75° de despliegue hacia afuera
+const ANGULO_CERRADO = -1.25;      // radianes: pétalos hacia arriba (capullo)
+const ANGULO_ABIERTO = 0.55;       // radianes: desplegados cayendo afuera-abajo
 
 // Estado de la animación (los botones de la página lo modifican)
 const estado = {
@@ -61,33 +58,30 @@ let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 } catch (e) {
-  // Sin WebGL no hay 3D: mostramos el mensaje de respaldo del HTML.
   mostrarError();
   throw e;
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
-renderer.toneMapping = THREE.ACESFilmicToneMapping; // look cinematográfico
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 
 /* ------------------------- 2. ESCENA BASE ------------------------- */
 const escena = new THREE.Scene();
-escena.fog = new THREE.Fog(0x3a2418, 18, 52); // el atardecer se traga la distancia
+escena.fog = new THREE.Fog(0x3a2418, 20, 60);
 
 const camara = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
 camara.position.set(0, 4.6, 11);
 
-// Controles: girar y acercar con inercia (la cámara la dirige el scroll)
 const controles = new OrbitControls(camara, renderer.domElement);
 controles.target.set(0, 3.2, 0);
 controles.enableDamping = true;
 controles.dampingFactor = 0.06;
 controles.minDistance = 5;
-controles.maxDistance = 18;
-controles.maxPolarAngle = 1.45;   // no deja pasar la cámara bajo el suelo
-controles.autoRotate = false;     // la cámara la dirige el scroll
+controles.maxDistance = 20;
+controles.maxPolarAngle = 1.45;
+controles.autoRotate = false;
 
 /* ------------------------- 3. CIELO CREPUSCULAR ------------------------- */
-// Domo invertido con degradado: noche cerrada arriba, naranja quemado al horizonte.
 function crearCielo(radio) {
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
@@ -122,7 +116,6 @@ function crearCielo(radio) {
 }
 crearCielo(160);
 
-// Sol: disco emisivo bajo en el horizonte
 const sol = new THREE.Mesh(
   new THREE.CircleGeometry(5, 40),
   new THREE.MeshBasicMaterial({ color: 0xffc37a, fog: false })
@@ -132,29 +125,38 @@ sol.lookAt(0, 7, 0);
 escena.add(sol);
 
 /* ------------------------- 4. LUCES CREPUSCULARES ------------------------- */
-escena.add(new THREE.HemisphereLight(0x6f5fb0, 0x0a0a12, 0.55)); // cielo violeta / suelo oscuro
+escena.add(new THREE.HemisphereLight(0x6f5fb0, 0x0a0a12, 0.55));
 
-const solPoniente = new THREE.DirectionalLight(0xffb066, 2.0);  // "hora dorada"
+const solPoniente = new THREE.DirectionalLight(0xffb066, 2.0);
 solPoniente.position.set(-6, 8, 4);
 escena.add(solPoniente);
 
-const contraluz = new THREE.DirectionalLight(0x7c5cff, 0.6);    // filo violeta
+const contraluz = new THREE.DirectionalLight(0x7c5cff, 0.6);
 contraluz.position.set(6, 4, -6);
 escena.add(contraluz);
 
-const corazon = new THREE.PointLight(0xffc37a, 26, 14, 2);       // brillo del centro de la flor
+const corazon = new THREE.PointLight(0xffc37a, 26, 14, 2);
 corazon.position.set(0, 3.4, 0);
 escena.add(corazon);
 
 /* ------------------------- 5. SUELO Y PARTÍCULAS ------------------------- */
 const suelo = new THREE.Mesh(
-  new THREE.CircleGeometry(40, 48),
+  new THREE.CircleGeometry(45, 48),
   new THREE.MeshStandardMaterial({ color: 0x07080d, roughness: 0.95 })
 );
 suelo.rotation.x = -Math.PI / 2;
 escena.add(suelo);
 
-// Polvo de luz flotando (Points = la forma más barata de dibujar partículas)
+// Anillo de asfalto alrededor del monumento (la avenida de la foto aérea)
+const avenida = new THREE.Mesh(
+  new THREE.RingGeometry(6.2, 10.5, 64),
+  new THREE.MeshStandardMaterial({ color: 0x14161c, roughness: 0.95 })
+);
+avenida.rotation.x = -Math.PI / 2;
+avenida.position.y = 0.01;
+escena.add(avenida);
+
+// Polvo de luz flotando
 const N_PARTICULAS = 300;
 const posParticulas = new Float32Array(N_PARTICULAS * 3);
 const velParticulas = new Float32Array(N_PARTICULAS);
@@ -178,116 +180,151 @@ escena.add(particulas);
 const flor = new THREE.Group();
 escena.add(flor);
 
-const aceroOscuro = new THREE.MeshStandardMaterial({
-  color: 0x2b2f36, metalness: 0.9, roughness: 0.45,
+const aceroClaro = new THREE.MeshStandardMaterial({
+  color: 0xd8d4cc, metalness: 0.55, roughness: 0.5,
 });
 
-// — Plataforma circular (como la base real del monumento) —
-const plataforma = new THREE.Mesh(new THREE.CylinderGeometry(4.3, 4.6, 0.35, 48), aceroOscuro);
+// — Plataforma circular —
+const plataforma = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.9, 0.35, 56), aceroClaro);
 plataforma.position.y = 0.175;
 flor.add(plataforma);
 
 const anillo = new THREE.Mesh(
-  new THREE.RingGeometry(3.7, 3.9, 64),
+  new THREE.RingGeometry(4.0, 4.2, 72),
   new THREE.MeshBasicMaterial({ color: 0xf2a33c, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
 );
 anillo.rotation.x = -Math.PI / 2;
 anillo.position.y = 0.36;
 flor.add(anillo);
 
-// — Columna central de acero oscuro (el "tallo" estructural real) —
+// — EDIFICIO CIRCULAR DE VIDRIO bajo los pétalos (el pabellón real) —
+const vidrio = new THREE.MeshStandardMaterial({
+  color: 0x9fc4d8, transparent: true, opacity: 0.32,
+  roughness: 0.12, metalness: 0.15, side: THREE.DoubleSide,
+});
+const pabellon = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 1.6, 48, 1, true), vidrio);
+pabellon.position.y = 0.35 + 0.8;
+flor.add(pabellon);
+
+// Resplandor cálido interior del pabellón
+const interior = new THREE.Mesh(
+  new THREE.CylinderGeometry(2.78, 2.78, 1.5, 48),
+  new THREE.MeshStandardMaterial({
+    color: 0x2a1c10, emissive: 0xffb45e, emissiveIntensity: 1.1, roughness: 0.8,
+  })
+);
+interior.position.y = 0.35 + 0.78;
+flor.add(interior);
+
+// Montantes verticales del muro de vidrio
+const montantes = new THREE.InstancedMesh(
+  new THREE.BoxGeometry(0.09, 1.6, 0.09), aceroClaro, 24
+);
+{
+  const d = new THREE.Object3D();
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2;
+    d.position.set(Math.cos(a) * 3.0, 0.35 + 0.8, Math.sin(a) * 3.0);
+    d.rotation.set(0, 0, 0);
+    d.updateMatrix();
+    montantes.setMatrixAt(i, d.matrix);
+  }
+}
+flor.add(montantes);
+
+// — Columna central clara (el "tallo" estructural) —
 const ALT_COLUMNA = 3.0;
-const columna = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, ALT_COLUMNA, 24), aceroOscuro);
+const columna = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, ALT_COLUMNA, 24), aceroClaro);
 columna.position.y = 0.35 + ALT_COLUMNA / 2;
 flor.add(columna);
 
 // — Núcleo superior (de donde nacen los brazos) —
-const nucleo = new THREE.Mesh(new THREE.SphereGeometry(0.55, 32, 24), aceroOscuro);
+const nucleo = new THREE.Mesh(new THREE.SphereGeometry(0.55, 32, 24), aceroClaro);
 nucleo.scale.y = 0.7;
 nucleo.position.y = 0.35 + ALT_COLUMNA;
 flor.add(nucleo);
 
-// — Pistilos: cilindros pequeños con puntas emisivas —
-const matPistilo = new THREE.MeshStandardMaterial({
-  color: 0xffd9a0, emissive: 0xff9a2e, emissiveIntensity: 2.0,
-});
-const pistilos = [];
-for (let i = 0; i < 8; i++) {
-  const a = (i / 8) * Math.PI * 2;
-  const vastago = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.7, 8), aceroOscuro);
-  vastago.position.set(Math.cos(a) * 0.28, 0.35 + ALT_COLUMNA + 0.35, Math.sin(a) * 0.28);
-  const punta = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), matPistilo);
-  punta.position.set(Math.cos(a) * 0.28, 0.35 + ALT_COLUMNA + 0.72, Math.sin(a) * 0.28);
-  flor.add(vastago, punta);
-  pistilos.push(punta);
-}
+// — Corazón luminoso: óculo cálido en el centro de la flor —
+const oculo = new THREE.Mesh(
+  new THREE.CircleGeometry(0.5, 32),
+  new THREE.MeshStandardMaterial({
+    color: 0xffd9a0, emissive: 0xff9a2e, emissiveIntensity: 2.2, side: THREE.DoubleSide,
+  })
+);
+oculo.rotation.x = -Math.PI / 2;
+oculo.position.y = 0.35 + ALT_COLUMNA + 0.42;
+flor.add(oculo);
 
-/* ----- 6.1 Geometría del panel metálico (una sola, reutilizada 16 veces) -----
-   Trapezoide extruido: angosto en la base, ancho en la punta, como los
-   paneles reales. Se acuesta para apuntar hacia afuera (+Z) y se le da una
-   curvatura leve de chapa metálica. */
-function crearGeometriaPanel() {
-  const LARGO = 3.6, ANCHO_BASE = 1.1, ANCHO_PUNTA = 1.9, GROSOR = 0.07;
+/* ----- 6.1 Geometría del pétalo de VELA (una sola, reutilizada 16 veces) -----
+   Ancho en la base, afinando a punta SUAVE y redondeada; curvatura de tela:
+   la punta cae hacia abajo (flor abierta que se despliega). Material BLANCO
+   mate, como la lona real — nada de cromo. */
+function crearGeometriaPetalo() {
+  const LARGO = 4.0, ANCHO_BASE = 2.3, GROSOR = 0.05;
 
   const s = new THREE.Shape();
   s.moveTo(-ANCHO_BASE / 2, 0);
   s.lineTo(ANCHO_BASE / 2, 0);
-  s.lineTo(ANCHO_PUNTA / 2, LARGO);
-  s.lineTo(-ANCHO_PUNTA / 2, LARGO);
+  // Lados que se afinan con curva suave hacia la punta redondeada
+  s.quadraticCurveTo(ANCHO_BASE * 0.32, LARGO * 0.55, 0.42, LARGO * 0.86);
+  s.quadraticCurveTo(0.22, LARGO * 1.0, 0, LARGO);          // punta redondeada
+  s.quadraticCurveTo(-0.22, LARGO * 1.0, -0.42, LARGO * 0.86);
+  s.quadraticCurveTo(-ANCHO_BASE * 0.32, LARGO * 0.55, -ANCHO_BASE / 2, 0);
   s.closePath();
 
   const geo = new THREE.ExtrudeGeometry(s, {
-    depth: GROSOR, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02,
-    bevelSegments: 1, curveSegments: 8, steps: 8,
+    depth: GROSOR, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015,
+    bevelSegments: 1, curveSegments: 12, steps: 10,
   });
   geo.translate(0, 0, -GROSOR / 2);
   geo.rotateX(Math.PI / 2); // el largo queda en +Z (hacia afuera), el grosor en Y
 
-  // Curvatura leve: punta algo elevada y centro acanalado → chapa metálica
+  // Curvatura de lona: la base sube un poco y la punta CAE (flor abierta),
+  // con un leve acanalado central como tela tensada.
   const pos = geo.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    const t = THREE.MathUtils.clamp(v.z / LARGO, 0, 1); // 0 = base, 1 = punta
-    const centro = 1 - Math.min(1, Math.abs(v.x) / (ANCHO_PUNTA / 2));
-    v.y += 0.38 * t * t - 0.10 * centro * t;
+    const t = THREE.MathUtils.clamp(v.z / LARGO, 0, 1);
+    const centro = 1 - Math.min(1, Math.abs(v.x) / (ANCHO_BASE / 2));
+    v.y += 0.28 * Math.sin(t * Math.PI)   // lomo suave al medio
+         - 0.85 * t * t                    // la punta cae hacia afuera-abajo
+         + 0.14 * centro * Math.sin(t * Math.PI); // acanalado de tela
     pos.setXYZ(i, v.x, v.y, v.z);
   }
   geo.computeVertexNormals();
   return geo;
 }
 
-const geoPanel = crearGeometriaPanel();
+const geoPetalo = crearGeometriaPetalo();
+const matLona = new THREE.MeshStandardMaterial({
+  color: 0xf3efe4,            // blanco lona, mate
+  roughness: 0.92,
+  metalness: 0.0,
+  emissive: 0x2a1e10,
+  emissiveIntensity: 0.35,    // el atardecer la tiñe cálida
+  side: THREE.DoubleSide,
+});
 
-// ----- 6.2 Los 16 paneles: soporte (reparto radial) + brazo + bisagra -----
+// ----- 6.2 Los 16 pétalos: soporte (reparto radial) + brazo + bisagra -----
 const bisagras = [];
-const Y_BISAGRA = 0.35 + ALT_COLUMNA - 0.25;
-const R_BISAGRA = 1.05;
+const Y_BISAGRA = 0.35 + ALT_COLUMNA - 0.15;
+const R_BISAGRA = 1.1;
 for (let i = 0; i < TOTAL_PETALOS; i++) {
-  const material = new THREE.MeshStandardMaterial({
-    // acero con leve variación por panel para que no se vea plano
-    color: new THREE.Color().setHSL(0.58, 0.04, 0.60 + (i % 3) * 0.015),
-    metalness: 0.85,
-    roughness: 0.4,
-    emissive: 0x1a1208,
-    emissiveIntensity: 0.5,
-    side: THREE.DoubleSide, // visible por dentro cuando está cerrada
-  });
-
   const soporte = new THREE.Group();
-  soporte.rotation.y = (i / TOTAL_PETALOS) * Math.PI * 2; // reparte en círculo
+  soporte.rotation.y = (i / TOTAL_PETALOS) * Math.PI * 2;
 
-  // Brazo: del centro de la columna hasta la bisagra (como la estructura real)
-  const brazo = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, R_BISAGRA, 8), aceroOscuro);
+  // Brazo: del centro de la columna hasta la bisagra
+  const brazo = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, R_BISAGRA, 8), aceroClaro);
   brazo.rotation.z = Math.PI / 2;
   brazo.position.set(R_BISAGRA / 2, Y_BISAGRA, 0);
   soporte.add(brazo);
 
   const bisagra = new THREE.Group();
-  bisagra.position.set(0, Y_BISAGRA, R_BISAGRA); // nace en la punta del brazo
+  bisagra.position.set(0, Y_BISAGRA, R_BISAGRA);
   bisagra.rotation.x = ANGULO_CERRADO; // empieza cerrada (capullo)
 
-  bisagra.add(new THREE.Mesh(geoPanel, material));
+  bisagra.add(new THREE.Mesh(geoPetalo, matLona));
   soporte.add(bisagra);
   flor.add(soporte);
   bisagras.push(bisagra);
@@ -311,10 +348,9 @@ if (chkAuto) chkAuto.addEventListener('change', () => {
 });
 
 /* ------- 7.1 Control externo de la apertura (para el scroll de la escena) ----
-   setApertura(v) recibe un número entre 0 (cerrada) y 1 (abierta) y pone los
-   paneles exactamente ahí, sin suavizado: el scroll manda directo.
-   main.js la llama en cada tick del scrub de la escena "Flor" (0→1→0).
-   También apaga el modo automático para que no pelee con el scroll. */
+   setApertura(v): 0 = cerrada (capullo), 1 = abierta (flor desplegada).
+   main.js la llama en cada tick del scrub (0→1→0). Apaga el modo automático
+   para que no pelee con el scroll. */
 function setApertura(v) {
   estado.automatico = false;
   if (chkAuto) chkAuto.checked = false;
@@ -325,31 +361,29 @@ function setApertura(v) {
 
 /* ------------------------- 8. CONTROL POR SCROLL + LOOP ------------------------- */
 const reloj = new THREE.Clock();
-let ultimaP = 0; // último progreso de scroll recibido (0..1)
+let ultimaP = 0;
 
 // update(p): main.js la llama con el scrub del scroll. SOLO mueve la cámara:
-// órbita lenta (azimut = base + p·1.2), radio 11→8.5, altura 4.6→3.4,
-// mirando a y 3.2→2.6. Los paneles los sigue moviendo setApertura.
+// órbita lenta (azimut = base + p·1.2), radio 12→9, altura 5.2→3.8,
+// mirando a y 3.4→2.8. Los pétalos los sigue moviendo setApertura.
 function update(p) {
   ultimaP = THREE.MathUtils.clamp(p || 0, 0, 1);
 }
 
 function aplicarPoseCamara(pe, t) {
-  const az = t * 0.05 + pe * 1.2;                    // deriva lenta + avance del scroll
-  const radio = THREE.MathUtils.lerp(11, 8.5, pe);
-  const y = THREE.MathUtils.lerp(4.6, 3.4, pe);
-  const lookY = THREE.MathUtils.lerp(3.2, 2.6, pe);
+  const az = t * 0.05 + pe * 1.2;
+  const radio = THREE.MathUtils.lerp(12, 9, pe);
+  const y = THREE.MathUtils.lerp(5.2, 3.8, pe);
+  const lookY = THREE.MathUtils.lerp(3.4, 2.8, pe);
   camara.position.set(radio * Math.sin(az), y, radio * Math.cos(az));
   controles.target.set(0, lookY, 0);
 }
 
 function tick() {
   requestAnimationFrame(tick);
-
-  // Pausa total cuando la sección no está en pantalla (rendimiento)
   if (!estado.visible || document.hidden) return;
 
-  const dt = Math.min(reloj.getDelta(), 0.05); // dt acotado: evita saltos
+  const dt = Math.min(reloj.getDelta(), 0.05);
   const t = reloj.elapsedTime;
 
   // Ciclo automático: se abre y se cierra sola cada ~7 segundos
@@ -361,17 +395,17 @@ function tick() {
     }
   }
 
-  // La apertura real persigue al objetivo con suavidad (sin tirones)
+  // La apertura real persigue al objetivo con suavidad
   estado.apertura += (estado.objetivo - estado.apertura) * Math.min(1, dt * 2.2);
 
-  // Cada panel abre con un leve desfase → se ve orgánico, no robótico
+  // Cada pétalo abre con leve desfase → orgánico, no robótico
   for (let i = 0; i < TOTAL_PETALOS; i++) {
     const desfase = (i / TOTAL_PETALOS) * 0.28;
     const a = THREE.MathUtils.smootherstep(
       THREE.MathUtils.clamp(estado.apertura * 1.28 - desfase, 0, 1), 0, 1
     );
     bisagras[i].rotation.x = THREE.MathUtils.lerp(ANGULO_CERRADO, ANGULO_ABIERTO, a)
-      + Math.sin(t * 1.4 + i * 0.7) * 0.012; // "respiración" sutil
+      + Math.sin(t * 1.4 + i * 0.7) * 0.012; // "respiración" de lona
   }
 
   // Las partículas ascienden y reaparecen abajo
@@ -383,12 +417,10 @@ function tick() {
   }
   p.needsUpdate = true;
 
-  // El anillo de la base pulsa suavemente
+  // El anillo de la base pulsa; el óculo "respira" luz
   anillo.material.opacity = 0.4 + Math.sin(t * 2) * 0.18;
-  // Los pistilos "respiran" luz
-  for (const punta of pistilos) {
-    punta.material.emissiveIntensity = 2.0 + Math.sin(t * 2.4) * 0.5;
-  }
+  oculo.material.emissiveIntensity = 2.2 + Math.sin(t * 2.4) * 0.5;
+  corazon.intensity = 26 + Math.sin(t * 1.7) * 6;
 
   aplicarPoseCamara(THREE.MathUtils.smootherstep(ultimaP, 0, 1), t);
 
@@ -408,7 +440,6 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Pausar cuando la sección sale de la pantalla
 new IntersectionObserver((entradas) => {
   estado.visible = entradas[0].isIntersecting;
 }, { threshold: 0.05 }).observe(contenedor);
