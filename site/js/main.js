@@ -22,22 +22,20 @@
   -------------------------------------------------------------------------- */
   var VIDEOS_AMBIENTE = [
     {
-      src: '../assets/video/browser-download-20260925T165850.630532971Z-0-gemini_generated_video_00e039ab.mp4',
-      titulo: 'Barquisimeto al atardecer',
-      descripcion: 'Video ambiente generado con IA (Veo).'
+      src: '../assets/video/video-obelisco.mp4',
+      titulo: 'Órbita sobre el Obelisco',
+      descripcion: 'Vuelo de dron alrededor del monumento al atardecer.'
     },
     {
-      src: '../assets/video/browser-download-20260925T170746.796259142Z-1-Drone_orbiting_obelisk_monument_20260925130747.mp4',
-      titulo: 'Órbita sobre el Obelisco',
-      descripcion: 'Vuelo de dron alrededor del monumento.'
+      src: '../assets/video/video-flor.mp4',
+      titulo: 'Flor de Venezuela de noche',
+      descripcion: 'Los 16 pétalos metálicos iluminados.'
+    },
+    {
+      src: '../assets/video/video-manto.mp4',
+      titulo: 'Manto de María al anochecer',
+      descripcion: 'La Virgen cinética entre las dos torres.'
     }
-    // ---- TERCER VIDEO: descomenta y completa cuando el archivo esté listo ----
-    // ,
-    // {
-    //   src: '../assets/video/NOMBRE_DEL_TERCER_VIDEO.mp4',
-    //   titulo: 'Título del tercer video',
-    //   descripcion: 'Descripción corta.'
-    // }
   ];
 
   var reduceMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
