@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<!-- ============================================================================
+  ÍCONOS DE LA CIUDAD CREPUSCULAR · Barquisimeto
+  ----------------------------------------------------------------------------
+  Landing de prueba: muestra de landings profesionales con animaciones 3D.
+  Stack: Tailwind (CDN) + GSAP/ScrollTrigger (CDN) + Three.js (CDN, módulos ES).
+
+  Estructura del proyecto:
+    site/index.html      → esta página (contenido + secciones)
+    site/css/styles.css  → estilos propios (paleta, grano de cine, detalles)
+    site/js/main.js      → lógica general: navegación, animaciones GSAP, videos
+    site/js/flor3d.js    → escena Three.js: la Flor de Venezuela en 3D
+
+  Los assets viven en ../assets/... (imágenes y videos generados con IA).
+============================================================================= -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Íconos de la Ciudad Crepuscular · Barquisimeto</title>
+  <meta name="description" content="El Obelisco, la Flor de Venezuela y el Manto de María: tres íconos de la identidad barquisimetana en una experiencia cinematográfica con 3D." />
+
+  <!-- Tipografías: Fraunces (titulares serif cinematográficos) + Inter (texto) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS (CDN) + configuración de la paleta "crepuscular" -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            noche:   '#05060a', // negro azulado de fondo
+            carbon:  '#0b0d13', // paneles
+            ambar:   '#f2a33c', // atardecer
+            cobre:   '#c2703d', // metal de la flor
+            violeta: '#8b5cf6', // cielo crepuscular
+            hueso:   '#f4efe6', // texto principal
+          },
+          fontFamily: {
+            display: ['Fraunces', 'Georgia', 'serif'],
+            body: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Clases de componentes con @apply (las compila el Play CDN en el navegador) -->
+  <style type="text/tailwindcss">
+    /* ---------- Componentes reutilizables ---------- */
+
+    .container-x {
+      @apply max-w-6xl mx-auto px-6;
+    }
+
+    .section-pad {
+      @apply py-24 md:py-32;
+    }
+
+    /* Etiqueta pequeña estilo "kicker" cinematográfico */
+    .eyebrow {
+      @apply text-ambar uppercase tracking-[0.35em] text-xs font-medium;
+    }
+
+    /* Tarjeta de dato (altura, año, piezas…) */
+    .stat-card {
+      @apply bg-white/[0.04] border border-white/10 rounded-2xl p-4 md:p-5 backdrop-blur-sm;
+    }
+    .stat-num {
+      @apply font-display font-light text-3xl md:text-4xl text-hueso;
+    }
+    .stat-label {
+      @apply mt-1 text-[0.7rem] uppercase tracking-[0.18em] text-hueso/50 leading-snug;
+    }
+
+    /* Botones */
+    .btn-primary {
+      @apply inline-block bg-ambar text-noche font-medium px-7 py-3.5 rounded-full
+             hover:bg-hueso transition-colors duration-300 text-sm uppercase tracking-[0.15em];
+    }
+    .btn-ghost {
+      @apply inline-block border border-hueso/30 text-hueso px-7 py-3.5 rounded-full
+             hover:border-ambar hover:text-ambar transition-colors duration-300
+             text-sm uppercase tracking-[0.15em] bg-transparent cursor-pointer;
+    }
+
+    /* Marco editorial para las fotografías de los monumentos */
+    .img-marco {
+      @apply relative rounded-3xl overflow-hidden border border-white/10 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)];
+    }
+    .img-marco img {
+      @apply scale-[1.12]; /* margen para el parallax de GSAP sin mostrar bordes */
+    }
+    .img-marco::after {
+      /* velo cálido inferior para dar "hora dorada" a todas las fotos */
+      content: "";
+      @apply absolute inset-0 pointer-events-none;
+      background: linear-gradient(to top, rgba(5,6,10,0.55), transparent 45%),
+                  linear-gradient(200deg, rgba(242,163,60,0.10), transparent 40%);
+    }
+
+    /* Tarjeta de video ambiente */
+    .video-card video {
+      @apply w-full aspect-video object-cover rounded-2xl border border-white/10 bg-black;
+    }
+    .video-card figcaption {
+      @apply mt-3 flex items-baseline justify-between gap-4;
+    }
+  </style>
+
+  <!-- Three.js como módulo ES: el importmap le dice al navegador dónde
+       encontrar "three" y sus complementos ("three/addons/") -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-noche text-hueso font-body antialiased overflow-x-hidden">
+
+  <!-- Barra de progreso de lectura (la anima main.js con GSAP) -->
+  <div id="barra-progreso" class="fixed top-0 left-0 h-[3px] w-full bg-gradient-to-r from-cobre via-ambar to-violeta origin-left scale-x-0 z-[60]"></div>
+
+  <!-- Grano de cine sobre toda la página (ver styles.css) -->
+  <div class="grano" aria-hidden="true"></div>
+
+  <!-- ======================= NAVEGACIÓN ======================= -->
+  <nav id="nav" class="fixed top-0 inset-x-0 z-50 transition-all duration-500">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="#inicio" class="font-display text-lg tracking-wide">
+        BQTO <span class="text-ambar italic">· íconos</span>
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm uppercase tracking-[0.2em] text-hueso/70">
+        <a href="#iconos" class="hover:text-ambar transition-colors">Íconos</a>
+        <a href="#flor3d" class="hover:text-ambar transition-colors">Flor 3D</a>
+        <a href="#video" class="hover:text-ambar transition-colors">Video</a>
+      </div>
+      <a href="#flor3d" class="md:hidden text-sm uppercase tracking-[0.2em] text-ambar">Ver 3D</a>
+    </div>
+  </nav>
+
+  <!-- ======================= HERO ======================= -->
+  <header id="inicio" class="relative min-h-screen flex items-end overflow-hidden">
+    <!-- Imagen panorámica de los tres monumentos -->
+    <img src="../assets/img/hero-barquisimeto.jpg"
+         alt="Panorama de Barquisimeto al atardecer con el Obelisco, la Flor de Venezuela y el Manto de María"
+         class="absolute inset-0 w-full h-full object-cover ken-burns" />
+    <!-- Velos cinematográficos: oscurecen para que el texto respire -->
+    <div class="absolute inset-0 bg-gradient-to-t from-noche via-noche/40 to-noche/20"></div>
+    <div class="absolute inset-0 bg-gradient-to-r from-noche/70 via-transparent to-transparent"></div>
+
+    <div class="relative z-10 max-w-6xl mx-auto px-6 pb-28 pt-40 w-full">
+      <p class="eyebrow mb-6 hero-fade">Barquisimeto · Venezuela</p>
+      <h1 class="font-display font-light leading-[0.95] text-[13vw] md:text-[7.5rem]">
+        <span class="block overflow-hidden"><span class="hero-line block">Íconos de la</span></span>
+        <span class="block overflow-hidden"><span class="hero-line block italic text-ambar">ciudad crepuscular</span></span>
+      </h1>
+      <p class="hero-fade mt-8 max-w-xl text-lg md:text-xl text-hueso/80 font-light leading-relaxed">
+        Tres monumentos que no son postales: son la memoria, el orgullo
+        y el alma de Barquisimeto.
+      </p>
+      <div class="hero-fade mt-10 flex flex-wrap gap-4">
+        <a href="#iconos" class="btn-primary">Conocer los íconos</a>
+        <a href="#flor3d" class="btn-ghost">Ver la flor en 3D</a>
+      </div>
+    </div>
+
+    <!-- Indicador de scroll -->
+    <div class="hero-fade absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-hueso/50">
+      <span class="text-[0.65rem] uppercase tracking-[0.3em]">Desliza</span>
+      <span class="scroll-hint block w-[1px] h-10 bg-hueso/40 overflow-hidden relative"></span>
+    </div>
+  </header>
+
+  <main>
+    <!-- ======================= INTRO ======================= -->
+    <section id="iconos" class="section-pad scroll-mt-20">
+      <div class="container-x">
+        <p class="eyebrow mb-6" data-reveal>La ciudad y sus símbolos</p>
+        <h2 class="font-display font-light text-4xl md:text-6xl leading-tight max-w-3xl" data-reveal>
+          No son atracciones.<br /><span class="italic text-ambar">Son identidad.</span>
+        </h2>
+        <div class="mt-8 grid md:grid-cols-2 gap-8 max-w-4xl text-hueso/70 font-light leading-relaxed text-lg">
+          <p data-reveal>
+            El Obelisco, la Flor de Venezuela y el Manto de María no decoran
+            Barquisimeto: <span class="text-hueso">la cuentan</span>. Cada uno marcó
+            una época — el cuatricentenario, el nuevo milenio, la fe de un pueblo —
+            y juntos dibujan el horizonte de la ciudad crepuscular.
+          </p>
+          <p data-reveal>
+            Esta página es una carta de amor a esos tres gigantes: con fotografía,
+            datos y una flor que puedes abrir con tus propias manos,
+            construida en 3D con código.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 01 · OBELISCO ======================= -->
+    <section id="obelisco" class="section-pad scroll-mt-20 bg-carbon/40">
+      <div class="container-x grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+        <div class="img-marco order-1" data-reveal>
+          <img src="../assets/img/obelisco.jpg"
+               alt="Obelisco de Barquisimeto a contraluz, torre blanca de concreto con reloj"
+               class="w-full h-[420px] md:h-[540px] object-cover" loading="lazy" data-parallax />
+        </div>
+        <div class="order-2">
+          <p class="eyebrow mb-4" data-reveal>01 · El guardián</p>
+          <h2 class="font-display font-light text-4xl md:text-5xl leading-tight" data-reveal>
+            Obelisco de <span class="italic text-ambar">Barquisimeto</span>
+          </h2>
+          <p class="mt-6 text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
+            Torre rectangular de concreto y acero que vigila la ciudad desde 1952.
+            Su gran reloj marcó el pulso del cuatricentenario y su mirador regala
+            la mejor vista del valle crepuscular.
+          </p>
+          <div class="mt-8 grid grid-cols-3 gap-4">
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="75" data-prefijo="~" data-sufijo=" m">~0 m</span></p>
+              <p class="stat-label">Altura</p>
+            </div>
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="1952">0</span></p>
+              <p class="stat-label">Inaugurado el 14 de septiembre</p>
+            </div>
+            <div class="stat-card" data-reveal>
+              <p class="stat-num text-2xl md:text-3xl pt-2">Reloj y mirador</p>
+              <p class="stat-label">Cuatricentenario de la ciudad</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 02 · FLOR DE VENEZUELA ======================= -->
+    <section id="flor" class="section-pad scroll-mt-20">
+      <div class="container-x grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+        <div class="order-2 md:order-1">
+          <p class="eyebrow mb-4" data-reveal>02 · La que florece</p>
+          <h2 class="font-display font-light text-4xl md:text-5xl leading-tight" data-reveal>
+            Flor de <span class="italic text-ambar">Venezuela</span>
+          </h2>
+          <p class="mt-6 text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
+            Diseñada por <span class="text-hueso">Fruto Vivas</span> e inspirada en
+            la orquídea y los tepuyes. Sus 16 pétalos mecánicos se abren y cierran
+            como un organismo vivo: representó a Venezuela en Hannover 2000
+            y floreció en Barquisimeto en 2008.
+          </p>
+          <div class="mt-8 grid grid-cols-3 gap-4">
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="16">0</span></p>
+              <p class="stat-label">Pétalos móviles</p>
+            </div>
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="2000">0</span></p>
+              <p class="stat-label">Hannover, representa a Venezuela</p>
+            </div>
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="2008">0</span></p>
+              <p class="stat-label">Florece en Barquisimeto</p>
+            </div>
+          </div>
+          <div class="mt-8" data-reveal>
+            <a href="#flor3d" class="btn-ghost">Manipularla en 3D ↓</a>
+          </div>
+        </div>
+        <div class="img-marco order-1 md:order-2" data-reveal>
+          <img src="../assets/img/flor-de-venezuela.jpg"
+               alt="Flor de Venezuela de noche, estructura de 16 pétalos metálicos iluminada"
+               class="w-full h-[420px] md:h-[540px] object-cover" loading="lazy" data-parallax />
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= 03 · MANTO DE MARÍA ======================= -->
+    <section id="manto" class="section-pad scroll-mt-20 bg-carbon/40">
+      <div class="container-x grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+        <div class="img-marco order-1" data-reveal>
+          <img src="../assets/img/divina-pastora.jpg"
+               alt="Manto de María al atardecer, escultura cinética de la Divina Pastora entre dos torres"
+               class="w-full h-[420px] md:h-[540px] object-cover" loading="lazy" data-parallax />
+        </div>
+        <div class="order-2">
+          <p class="eyebrow mb-4" data-reveal>03 · La que cobija</p>
+          <h2 class="font-display font-light text-4xl md:text-5xl leading-tight" data-reveal>
+            Manto de María <span class="italic text-ambar">· Divina Pastora</span>
+          </h2>
+          <p class="mt-6 text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
+            Una imagen cinética de la Divina Pastora tejida con 522 líneas
+            tubulares y 3.772 piezas, suspendida entre dos torres sobre la colina.
+            Inaugurada en 2016: el manto que arropa a la ciudad.
+          </p>
+          <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="63" data-sufijo=" m">0 m</span></p>
+              <p class="stat-label">El conjunto</p>
+            </div>
+            <div class="stat-card" data-reveal>
+              <p class="stat-num text-xl md:text-2xl pt-3">47,14 × 23,3 m</p>
+              <p class="stat-label">La imagen cinética</p>
+            </div>
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="3772">0</span></p>
+              <p class="stat-label">Piezas · 522 líneas</p>
+            </div>
+            <div class="stat-card" data-reveal>
+              <p class="stat-num"><span data-contador="2016">0</span></p>
+              <p class="stat-label">Inaugurado el 13 de enero</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= FLOR 3D INTERACTIVA ======================= -->
+    <section id="flor3d" class="section-pad scroll-mt-20 relative overflow-hidden">
+      <div class="container-x">
+        <p class="eyebrow mb-4" data-reveal>Interactivo · Three.js</p>
+        <h2 class="font-display font-light text-4xl md:text-6xl leading-tight" data-reveal>
+          La flor, <span class="italic text-ambar">en tus manos</span>
+        </h2>
+        <p class="mt-6 max-w-2xl text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
+          Arrastra para girar alrededor de ella y usa la rueda o dos dedos para
+          acercar. Abre y cierra sus 16 pétalos: cada uno fue modelado con código,
+          sin ningún programa de 3D.
+        </p>
+
+        <!-- Controles de la escena 3D -->
+        <div class="mt-8 flex flex-wrap items-center gap-4" data-reveal>
+          <button id="btn-abrir" class="btn-primary" type="button">Abrir pétalos</button>
+          <button id="btn-cerrar" class="btn-ghost" type="button">Cerrar pétalos</button>
+          <label class="flex items-center gap-2 text-sm text-hueso/60 cursor-pointer select-none">
+            <input id="chk-auto" type="checkbox" checked class="accent-[#f2a33c] w-4 h-4" />
+            Movimiento automático
+          </label>
+        </div>
+      </div>
+
+      <!-- Lienzo 3D: flor3d.js dibuja aquí dentro -->
+      <div class="container-x mt-8" data-reveal>
+        <div id="flor3d-escena" class="relative w-full h-[70vh] min-h-[420px] rounded-3xl overflow-hidden border border-white/10 bg-noche">
+          <canvas id="flor3d-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+          <!-- Mensaje de respaldo si WebGL no está disponible -->
+          <div id="flor3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
+            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
+          </div>
+          <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-[0.7rem] uppercase tracking-[0.3em] text-hueso/40 pointer-events-none">
+            Arrastra para girar
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= VIDEO AMBIENTE ======================= -->
+    <!--
+      SLOT DE VIDEOS: las tarjetas se generan desde el arreglo VIDEOS_AMBIENTE
+      en js/main.js. Para agregar el tercer video (cuando llegue), solo hay que
+      añadir una entrada más a ese arreglo. No hace falta tocar este HTML.
+    -->
+    <section id="video" class="section-pad scroll-mt-20 bg-carbon/40">
+      <div class="container-x">
+        <p class="eyebrow mb-4" data-reveal>Ambiente · Video IA</p>
+        <h2 class="font-display font-light text-4xl md:text-6xl leading-tight" data-reveal>
+          La ciudad <span class="italic text-ambar">en movimiento</span>
+        </h2>
+        <p class="mt-6 max-w-2xl text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
+          Fragmentos generados con inteligencia artificial para vestir
+          la atmósfera crepuscular. Se reproducen solos al entrar en pantalla.
+        </p>
+        <!-- main.js inserta aquí una tarjeta por cada video de VIDEOS_AMBIENTE -->
+        <div id="video-grid" class="mt-10 grid md:grid-cols-2 gap-8"></div>
+      </div>
+    </section>
+
+    <!-- ======================= CIERRE ======================= -->
+    <footer class="relative overflow-hidden">
+      <div class="container-x py-24 md:py-32 text-center">
+        <p class="eyebrow mb-6" data-reveal>Barquisimeto · Ciudad crepuscular</p>
+        <p class="font-display font-light italic text-3xl md:text-5xl leading-tight max-w-3xl mx-auto" data-reveal>
+          “Tres gigantes. Una sola <span class="text-ambar not-italic">identidad</span>.”
+        </p>
+        <p class="mt-8 text-hueso/50 font-light" data-reveal>
+          Proyecto de aprendizaje · Construido con Three.js, GSAP y Tailwind ·
+          <span id="anio">2026</span>
+        </p>
+      </div>
+      <div class="border-t border-white/10">
+        <div class="container-x py-6 flex flex-col md:flex-row items-center justify-between gap-3 text-sm text-hueso/40">
+          <p>Íconos de la ciudad crepuscular — muestra educativa.</p>
+          <a href="#inicio" class="hover:text-ambar transition-colors uppercase tracking-[0.2em] text-xs">Volver arriba ↑</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- GSAP + ScrollTrigger (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <!-- Lógica general de la página -->
+  <script src="js/main.js"></script>
+  <!-- Escena 3D (módulo ES: se carga diferido por naturaleza) -->
+  <script type="module" src="js/flor3d.js"></script>
+</body>
+</html>
