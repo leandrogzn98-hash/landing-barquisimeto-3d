@@ -247,7 +247,7 @@
         <div class="cielo-crepusculo" aria-hidden="true"></div>
         <div id="obelisco-sol" class="sol" aria-hidden="true"></div>
 
-        <div class="relative z-10 h-full flex flex-col items-center justify-center px-6">
+        <div id="obelisco-contenido" class="relative z-10 h-full flex flex-col items-center justify-center px-6">
           <p class="eyebrow mb-4">01 · El guardián</p>
           <h2 class="font-display font-light text-4xl md:text-6xl text-center leading-tight">
             Obelisco de <span class="italic text-ambar">Barquisimeto</span>
@@ -336,31 +336,33 @@
     <section id="escena-flor" class="escena scroll-mt-20">
 
       <div id="flor-stage" class="escena-stage bg-noche">
-        <div class="relative z-10 h-full flex flex-col px-6 pt-20 md:pt-24 pb-6 max-w-6xl mx-auto w-full">
-          <p class="eyebrow mb-3">02 · La que florece</p>
-          <h2 class="font-display font-light text-4xl md:text-6xl leading-tight">
-            Flor de <span class="italic text-ambar">Venezuela</span>
-          </h2>
-
-          <!-- Controles manuales de la flor (además del scroll) -->
-          <div class="mt-5 flex flex-wrap items-center gap-4">
-            <button id="btn-abrir" class="btn-primary" type="button">Abrir pétalos</button>
-            <button id="btn-cerrar" class="btn-ghost" type="button">Cerrar pétalos</button>
-            <label class="flex items-center gap-2 text-sm text-hueso/60 cursor-pointer select-none">
-              <input id="chk-auto" type="checkbox" checked class="accent-[#f2a33c] w-4 h-4" />
-              Movimiento automático
-            </label>
+        <!-- Lienzo 3D a sangre: ocupa todo el escenario fijado -->
+        <div id="flor3d-escena" class="absolute inset-0">
+          <canvas id="flor3d-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+          <div id="flor3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
+            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
           </div>
+        </div>
 
-          <!-- Lienzo 3D: flor3d.js dibuja aquí dentro -->
-          <div id="flor3d-escena" class="relative w-full flex-1 min-h-[300px] mt-5 rounded-3xl overflow-hidden border border-white/10 bg-noche">
-            <canvas id="flor3d-canvas" class="absolute inset-0 w-full h-full block"></canvas>
-            <div id="flor3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
-              <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
-            </div>
-            <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-[0.7rem] uppercase tracking-[0.3em] text-hueso/40 pointer-events-none">
+        <!-- Título y controles superpuestos: no bloquean el arrastre del 3D -->
+        <div id="flor-contenido" class="absolute inset-0 z-10 pointer-events-none">
+          <div class="h-full flex flex-col px-6 pt-20 md:pt-24 pb-6 max-w-6xl mx-auto w-full">
+            <p class="eyebrow mb-3">02 · La que florece</p>
+            <h2 class="font-display font-light text-4xl md:text-6xl leading-tight">
+              Flor de <span class="italic text-ambar">Venezuela</span>
+            </h2>
+            <p class="mt-3 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">
               El scroll abre y cierra la flor · arrastra para girar
             </p>
+            <!-- Controles manuales (además del scroll): solo ellos reciben clics -->
+            <div class="mt-auto flex flex-wrap items-center gap-3 pointer-events-auto">
+              <button id="btn-abrir" class="btn-primary text-xs px-5 py-2.5" type="button">Abrir pétalos</button>
+              <button id="btn-cerrar" class="btn-ghost text-xs px-5 py-2.5" type="button">Cerrar pétalos</button>
+              <label class="flex items-center gap-2 text-sm text-hueso/60 cursor-pointer select-none">
+                <input id="chk-auto" type="checkbox" checked class="accent-[#f2a33c] w-4 h-4" />
+                Movimiento automático
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -451,7 +453,7 @@
         <!-- Velos para que el título y las tarjetas respiren -->
         <div class="absolute inset-0 bg-gradient-to-t from-noche via-noche/10 to-noche/60"></div>
 
-        <div class="relative z-10 h-full flex flex-col items-center justify-start px-6 pt-24 md:pt-28">
+        <div id="manto-contenido" class="relative z-10 h-full flex flex-col items-center justify-start px-6 pt-24 md:pt-28">
           <p class="eyebrow mb-4">03 · La que cobija</p>
           <h2 class="font-display font-light text-4xl md:text-6xl text-center leading-tight"
               style="text-shadow: 0 4px 40px rgba(0,0,0,0.8);">
