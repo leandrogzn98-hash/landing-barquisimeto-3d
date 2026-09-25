@@ -306,7 +306,20 @@ new IntersectionObserver((entradas) => {
   estado.visible = entradas[0].isIntersecting;
 }, { threshold: 0.05 }).observe(contenedor);
 
+/* ------- 8.1 Control externo de la apertura (para el scroll de la escena) ----
+   setApertura(v) recibe un número entre 0 (cerrada) y 1 (abierta) y pone los
+   pétalos exactamente ahí, sin suavizado: el scroll manda directo.
+   main.js la llama en cada tick del scrub de la escena "Flor" (0→1→0).
+   También apaga el modo automático para que no pelee con el scroll. */
+function setApertura(v) {
+  estado.automatico = false;
+  if (chkAuto) chkAuto.checked = false;
+  const n = Math.min(1, Math.max(0, v));
+  estado.objetivo = n;
+  estado.apertura = n;
+}
+
 // Utilidad para depurar/aprender desde la consola del navegador:
-window.__flor3d = { estado, TOTAL_PETALOS };
+window.__flor3d = { estado, TOTAL_PETALOS, setApertura };
 
 animar();
