@@ -8,7 +8,7 @@
    5. Preloader cinematográfico + entrada del hero (split por caracteres)
    6. Motor de splits (chars/words) + revelados por scroll
    7. Cursor personalizado + botones magnéticos
-   8. Escenas 3D fijadas (Obelisco / Flor / Manto): el scroll dirige cámaras
+   8. Escenas de video fijadas (Obelisco / Flor / Manto): el scroll dirige el clip
    9. Sonido ambiente generativo (Web Audio, inspirado en el golpe larense)
    10. Anclas con scroll suave
    ============================================================================ */
@@ -26,8 +26,8 @@
     },
     {
       src: '../assets/video/video-flor.mp4',
-      titulo: 'Flor de Venezuela de noche',
-      descripcion: 'Los 16 pétalos metálicos iluminados.'
+      titulo: 'Flor de Venezuela al atardecer',
+      descripcion: 'Órbita aérea sobre los pétalos blancos.'
     },
     {
       src: '../assets/video/video-manto.mp4',
@@ -277,10 +277,10 @@
 
     // El anillo crece sobre elementos interactivos (delegación de eventos).
     document.addEventListener('mouseover', function (e) {
-      if (e.target.closest('a, button, input, canvas')) { anillo.classList.add('grande'); }
+      if (e.target.closest('a, button, input, video')) { anillo.classList.add('grande'); }
     });
     document.addEventListener('mouseout', function (e) {
-      if (e.target.closest('a, button, input, canvas')) { anillo.classList.remove('grande'); }
+      if (e.target.closest('a, button, input, video')) { anillo.classList.remove('grande'); }
     });
 
     // Botones magnéticos: siguen sutilmente al cursor y vuelven con rebote.
@@ -301,18 +301,18 @@
   }
 
   /* --------------------------------------------------------------------------
-     8. ESCENAS 3D FIJADAS (una por monumento)
+     8. ESCENAS DE VIDEO FIJADAS (una por monumento)
      --------------------------------------------------------------------------
-     Patrón por escena:
+     Patrón por escena (aire Abeto: el scroll es el timeline):
        · ScrollTrigger fija el ".escena-stage" (100vh) en pantalla
          (pin, sin espacio extra: las tarjetas desfilan POR ENCIMA).
-       · Otro ScrollTrigger con scrub llama a modulo.update(p): el scroll
-         dirige la CÁMARA del 3D en tiempo real (aire Abeto):
-           Obelisco = contrapicado monumental que sube orbitando;
-           Flor     = órbita lenta + pétalos 0→1→0 (setApertura);
-           Manto    = de lado (bosque de tubos) a frente (la Virgen se arma).
+       · Otro ScrollTrigger con scrub fija video.currentTime según el
+         progreso: el scroll AVANZA el clip como si dirigiera la cámara.
+         Los videos nunca se reproducen solos en la escena (van pausados);
+         el póster evita el flash negro antes de que carguen.
      Con "reducir movimiento" no se fija ni se anima nada: el contenido
-     queda apilado en flujo normal y todo sigue legible.
+     queda apilado en flujo normal, los videos muestran su primer
+     fotograma y todo sigue legible.
   -------------------------------------------------------------------------- */
   if (!reduceMovimiento) {
 
@@ -329,8 +329,8 @@
     }
 
     // Disuelve el contenido superpuesto al final de cada escena para que
-    // el mensaje de cierre quede limpio sobre el 3D (sin traslapes).
-    function disolverAlFinal(idSeccion, idContenido, idEscena3d) {
+    // el mensaje de cierre quede limpio sobre el video (sin traslapes).
+    function disolverAlFinal(idSeccion, idContenido, idVideoEscena) {
       var tl = gsap.timeline({
         scrollTrigger: {
           trigger: idSeccion,
@@ -340,63 +340,63 @@
         }
       });
       tl.to(idContenido, { autoAlpha: 0, yPercent: -6, ease: 'none', duration: 0.2 }, 0.8);
-      if (idEscena3d) {
-        tl.to(idEscena3d, { opacity: 0.3, ease: 'none', duration: 0.2 }, 0.8);
+      if (idVideoEscena) {
+        tl.to(idVideoEscena, { opacity: 0.3, ease: 'none', duration: 0.2 }, 0.8);
       }
       return tl;
     }
 
-    /* ---- 8.1 OBELISCO: el scroll dirige la cámara del 3D ---- */
-    fijarEscena('#escena-obelisco', '#obelisco-stage');
-    ScrollTrigger.create({
-      trigger: '#escena-obelisco',
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 1,
-      onUpdate: function (st) {
-        var m = window.__obelisco3d;
-        if (m && typeof m.update === 'function') { m.update(st.progress, 0.016); }
+    // El scroll dirige el video: progreso 0→1 mapea a tiempo 0→duración.
+    // Se evita fijar exactamente la duración (algunos navegadores
+    // congelan el último fotograma en negro al llegar al final).
+    function videoDirigidoPorScroll(idSeccion, idVideo) {
+      var video = document.getElementById(idVideo);
+      if (!video) { return; }
+      var duracion = 0;
+      function leerDuracion() {
+        if (video.duration && isFinite(video.duration)) { duracion = video.duration; }
       }
-    });
-    disolverAlFinal('#escena-obelisco', '#obelisco-contenido', '#obelisco3d-escena')
+      video.addEventListener('loadedmetadata', leerDuracion);
+      leerDuracion();
+      // Pinta el primer fotograma en cuanto hay datos (sin reproducir).
+      video.addEventListener('loadeddata', function () {
+        try { if (video.currentTime < 0.01) { video.currentTime = 0.01; } } catch (e) { /* noop */ }
+      });
+      ScrollTrigger.create({
+        trigger: idSeccion,
+        start: 'top top',
+        end: 'bottom bottom',
+        scrub: 1,
+        onUpdate: function (st) {
+          if (!duracion) { leerDuracion(); }
+          if (!duracion) { return; }
+          try {
+            var t = st.progress * duracion;
+            if (t >= duracion) { t = duracion - 0.05; }
+            if (Math.abs(video.currentTime - t) > 0.04) { video.currentTime = t; }
+          } catch (e) { /* seek aún no disponible: noop */ }
+        }
+      });
+    }
+
+    /* ---- 8.1 OBELISCO: órbita de dron dirigida por el scroll ---- */
+    fijarEscena('#escena-obelisco', '#obelisco-stage');
+    videoDirigidoPorScroll('#escena-obelisco', '#obelisco-video');
+    disolverAlFinal('#escena-obelisco', '#obelisco-contenido', '#obelisco-video-escena')
       .to('.hint-obelisco', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
 
-    /* ---- 8.2 FLOR: órbita de cámara + pétalos 0→1→0 ----
-       (Los módulos 3D cargan diferido: por eso se verifica que existan.) */
+    /* ---- 8.2 FLOR: órbita aérea al atardecer ---- */
     fijarEscena('#escena-flor', '#flor-stage');
-    ScrollTrigger.create({
-      trigger: '#escena-flor',
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 1,
-      onUpdate: function (st) {
-        var p = st.progress;
-        var apertura = p < 0.5 ? p * 2 : (1 - p) * 2; // 0→1→0
-        var m = window.__flor3d;
-        if (m) {
-          if (typeof m.setApertura === 'function') { m.setApertura(apertura); }
-          if (typeof m.update === 'function') { m.update(p, 0.016); }
-        }
-      }
-    });
-    disolverAlFinal('#escena-flor', '#flor-contenido', '#flor3d-escena');
+    videoDirigidoPorScroll('#escena-flor', '#flor-video');
+    disolverAlFinal('#escena-flor', '#flor-contenido', '#flor-video-escena');
 
-    /* ---- 8.3 MANTO: de lado (tubos abstractos) a frente (la Virgen) ---- */
+    /* ---- 8.3 MANTO: travelling lateral frente a la Virgen ---- */
     fijarEscena('#escena-manto', '#manto-stage');
-    ScrollTrigger.create({
-      trigger: '#escena-manto',
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: 1,
-      onUpdate: function (st) {
-        var m = window.__manto3d;
-        if (m && typeof m.update === 'function') { m.update(st.progress, 0.016); }
-      }
-    });
-    disolverAlFinal('#escena-manto', '#manto-contenido', '#manto3d-escena')
+    videoDirigidoPorScroll('#escena-manto', '#manto-video');
+    disolverAlFinal('#escena-manto', '#manto-contenido', '#manto-video-escena')
       .to('.hint-manto', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
 
-    // Recalcular los puntos de fijado cuando todo (incluidas imágenes) cargue
+    // Recalcular los puntos de fijado cuando todo (incluidos videos) cargue
     window.addEventListener('load', function () { ScrollTrigger.refresh(); });
   }
 

@@ -4,13 +4,12 @@
   ----------------------------------------------------------------------------
   Landing de venta inmersiva: tres escenas cinematográficas fijadas por
   scroll (una por monumento) con tono persuasivo y CTA final.
-  Stack: Tailwind (CDN) + GSAP/ScrollTrigger (CDN) + Three.js (CDN, módulos ES).
+  Stack: Tailwind (CDN) + GSAP/ScrollTrigger (CDN) + video IA dirigido por scroll.
 
   Estructura del proyecto:
     site/index.html      → esta página (hero, intro, 3 escenas, video, footer)
     site/css/styles.css  → estilos propios (paleta, grano, escenas fijadas)
     site/js/main.js      → lógica general: nav, videos y escenas con ScrollTrigger
-    site/js/flor3d.js    → escena Three.js: la Flor de Venezuela en 3D
 
   Los assets viven en ../assets/... (fotos reales + videos generados con IA).
 ============================================================================= -->
@@ -19,7 +18,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Íconos de la Ciudad Crepuscular · Barquisimeto</title>
-  <meta name="description" content="El Obelisco, la Flor de Venezuela y el Manto de María: tres íconos de la identidad barquisimetana en una experiencia cinematográfica con 3D." />
+  <meta name="description" content="El Obelisco, la Flor de Venezuela y el Manto de María: tres íconos de la identidad barquisimetana en una experiencia cinematográfica en video dirigida por scroll." />
 
   <!-- Tipografías: Fraunces (titulares serif cinematográficos) + Inter (texto) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -139,16 +138,6 @@
     }
   </style>
 
-  <!-- Three.js como módulo ES: el importmap le dice al navegador dónde
-       encontrar "three" y sus complementos ("three/addons/") -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-      }
-    }
-  </script>
 </head>
 
 <body class="bg-noche text-hueso font-body antialiased overflow-x-hidden">
@@ -189,7 +178,7 @@
         <a href="#escena-manto" class="hover:text-ambar transition-colors">Manto</a>
         <a href="#video" class="hover:text-ambar transition-colors">Video</a>
       </div>
-      <a href="#escena-flor" class="md:hidden text-sm uppercase tracking-[0.2em] text-ambar">Ver 3D</a>
+      <a href="#escena-flor" class="md:hidden text-sm uppercase tracking-[0.2em] text-ambar">Ver video</a>
     </div>
   </nav>
 
@@ -215,7 +204,7 @@
       </p>
       <div class="hero-fade mt-10 flex flex-wrap gap-4">
         <a href="#escena-obelisco" class="btn-primary">Vivir la experiencia</a>
-        <a href="#escena-flor" class="btn-ghost">Ver la flor en 3D</a>
+        <a href="#escena-flor" class="btn-ghost">Ver la flor</a>
       </div>
     </div>
 
@@ -243,8 +232,7 @@
           </p>
           <p data-reveal>
             Esta página es una carta de amor a esos tres gigantes: con fotografía,
-            datos y una flor que puedes abrir con tus propias manos,
-            construida en 3D con código.
+            datos y video cinematográfico que se mueve con tu scroll.
           </p>
         </div>
       </div>
@@ -262,19 +250,18 @@
          ----------------------------------------------------------------
          Escena FIJADA (pinned): el stage de 100vh se queda quieto en
          pantalla (lo fija main.js con ScrollTrigger) mientras las
-         tarjetas desfilan por encima. El canvas 3D (obelisco3d.js) pinta
-         el Obelisco real en tiempo real; el scroll dirige la cámara:
-         empieza en contrapicado monumental y sube orbitando.
+         tarjetas desfilan por encima. El video cinematográfico (generado
+         con IA desde una foto fiel del monumento) lo dirige el scroll:
+         al bajar, la cámara avanza por el clip (efecto 3D interactivo).
          ================================================================ -->
     <section id="escena-obelisco" class="escena scroll-mt-20">
 
-      <!-- Escenario fijado: Obelisco en 3D real a pantalla completa -->
+      <!-- Escenario fijado: video cinematográfico a pantalla completa -->
       <div id="obelisco-stage" class="escena-stage bg-noche">
-        <div id="obelisco3d-escena" class="absolute inset-0">
-          <canvas id="obelisco-canvas" class="absolute inset-0 w-full h-full block"></canvas>
-          <div id="obelisco3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
-            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
-          </div>
+        <div id="obelisco-video-escena" class="absolute inset-0">
+          <video id="obelisco-video" class="absolute inset-0 w-full h-full block object-cover"
+                 muted playsinline preload="auto" poster="../assets/img/poster-obelisco.jpg"
+                 src="../assets/video/video-obelisco.mp4"></video>
         </div>
 
         <div id="obelisco-contenido" class="absolute inset-0 z-10 pointer-events-none">
@@ -283,7 +270,7 @@
             <h2 class="font-display font-light text-4xl md:text-6xl leading-tight" data-split="words">
               Obelisco de <span class="italic text-ambar">Barquisimeto</span>
             </h2>
-            <p class="hint-obelisco mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Sigue bajando · arrastra para girar ↓</p>
+            <p class="hint-obelisco mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Sigue bajando · el video se mueve contigo ↓</p>
           </div>
         </div>
       </div>
@@ -353,24 +340,21 @@
     <!-- ================================================================
          ESCENA 02 · FLOR DE VENEZUELA — "La que florece"
          ----------------------------------------------------------------
-         El canvas 3D ocupa el escenario fijado. El progreso del scroll
-         abre los pétalos de 0 a 1 y luego los vuelve a cerrar (0→1→0)
-         llamando a window.__flor3d.setApertura() en cada tick del scrub.
-         Los botones "Abrir/Cerrar" siguen funcionando: el scroll retoma
-         el control en cuanto te mueves.
+         El video ocupa el escenario fijado a sangre. El progreso del
+         scroll avanza el clip (main.js fija video.currentTime): órbita
+         aérea alrededor de la flor al atardecer, dirigida por tu scroll.
          ================================================================ -->
     <section id="escena-flor" class="escena scroll-mt-20">
 
       <div id="flor-stage" class="escena-stage bg-noche">
-        <!-- Lienzo 3D a sangre: ocupa todo el escenario fijado -->
-        <div id="flor3d-escena" class="absolute inset-0">
-          <canvas id="flor3d-canvas" class="absolute inset-0 w-full h-full block"></canvas>
-          <div id="flor3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
-            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
-          </div>
+        <!-- Video a sangre: ocupa todo el escenario fijado -->
+        <div id="flor-video-escena" class="absolute inset-0">
+          <video id="flor-video" class="absolute inset-0 w-full h-full block object-cover"
+                 muted playsinline preload="auto" poster="../assets/img/poster-flor.jpg"
+                 src="../assets/video/video-flor.mp4"></video>
         </div>
 
-        <!-- Título y controles superpuestos: no bloquean el arrastre del 3D -->
+        <!-- Título superpuesto -->
         <div id="flor-contenido" class="absolute inset-0 z-10 pointer-events-none">
           <div class="h-full flex flex-col px-6 pt-20 md:pt-24 pb-6 max-w-6xl mx-auto w-full">
             <p class="eyebrow mb-3">02 · La que florece</p>
@@ -378,17 +362,8 @@
               Flor de <span class="italic text-ambar">Venezuela</span>
             </h2>
             <p class="mt-3 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">
-              El scroll abre y cierra la flor · arrastra para girar
+              El scroll dirige la cámara · video cinematográfico
             </p>
-            <!-- Controles manuales (además del scroll): solo ellos reciben clics -->
-            <div class="mt-auto flex flex-wrap items-center gap-3 pointer-events-auto">
-              <button id="btn-abrir" class="btn-primary text-xs px-5 py-2.5" type="button">Abrir pétalos</button>
-              <button id="btn-cerrar" class="btn-ghost text-xs px-5 py-2.5" type="button">Cerrar pétalos</button>
-              <label class="flex items-center gap-2 text-sm text-hueso/60 cursor-pointer select-none">
-                <input id="chk-auto" type="checkbox" checked class="accent-[#f2a33c] w-4 h-4" />
-                Movimiento automático
-              </label>
-            </div>
           </div>
         </div>
       </div>
@@ -412,7 +387,7 @@
             <h3 class="tarjeta-titulo">16 pétalos mecánicos</h3>
             <p class="tarjeta-texto">
               Se abren y se cierran de verdad: la estás viendo moverse
-              <span class="text-hueso">aquí mismo, en 3D</span>.
+              <span class="text-hueso">aquí mismo, en video</span>.
             </p>
           </article>
         </div>
@@ -463,21 +438,19 @@
     <!-- ================================================================
          ESCENA 03 · MANTO DE MARÍA — "La que cobija"
          ----------------------------------------------------------------
-         Escena FIJADA (pinned): el canvas 3D (manto3d.js) recrea el
-         monumento cinético real — miles de tubos de acero entre dos
-         torres. El scroll orbita la cámara: de lado es un bosque de
-         tubos abstracto; de frente, la Virgen se arma ante tus ojos.
-         Las tarjetas desfilan por encima.
+         Escena FIJADA (pinned): el video cinematográfico recrea el
+         monumento cinético real al atardecer. El scroll avanza el clip:
+         un travelling lateral frente a la Virgen de tubos entre las dos
+         torres. Las tarjetas desfilan por encima.
          ================================================================ -->
     <section id="escena-manto" class="escena scroll-mt-20">
 
       <div id="manto-stage" class="escena-stage bg-noche">
-        <!-- Manto cinético en 3D real a pantalla completa -->
-        <div id="manto3d-escena" class="absolute inset-0">
-          <canvas id="manto-canvas" class="absolute inset-0 w-full h-full block"></canvas>
-          <div id="manto3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
-            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
-          </div>
+        <!-- Video cinematográfico a pantalla completa -->
+        <div id="manto-video-escena" class="absolute inset-0">
+          <video id="manto-video" class="absolute inset-0 w-full h-full block object-cover"
+                 muted playsinline preload="auto" poster="../assets/img/poster-manto.jpg"
+                 src="../assets/video/video-manto.mp4"></video>
         </div>
 
         <div id="manto-contenido" class="absolute inset-0 z-10 pointer-events-none">
@@ -487,7 +460,7 @@
                 style="text-shadow: 0 4px 40px rgba(0,0,0,0.8);">
               Manto de María <span class="italic text-ambar">· Divina Pastora</span>
             </h2>
-            <p class="hint-manto mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Baja: la Virgen se arma de frente ↓</p>
+            <p class="hint-manto mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Baja y recorre el monumento ↓</p>
           </div>
         </div>
       </div>
@@ -552,8 +525,8 @@
     <!-- ======================= VIDEO AMBIENTE ======================= -->
     <!--
       SLOT DE VIDEOS: las tarjetas se generan desde el arreglo VIDEOS_AMBIENTE
-      en js/main.js. Para agregar el tercer video (cuando llegue), solo hay que
-      añadir una entrada más a ese arreglo. No hace falta tocar este HTML.
+      en js/main.js. Para agregar o cambiar un video, edita ese arreglo.
+      No hace falta tocar este HTML.
     -->
     <section id="video" class="section-pad scroll-mt-20 bg-carbon/40">
       <div class="container-x">
@@ -588,7 +561,7 @@
           “Tres gigantes. Una sola <span class="text-ambar not-italic">identidad</span>.”
         </p>
         <p class="mt-8 text-hueso/50 font-light" data-reveal>
-          Proyecto de aprendizaje · Construido con Three.js, GSAP y Tailwind ·
+          Proyecto de aprendizaje · Construido con video IA, GSAP y Tailwind ·
           <span id="anio">2026</span>
         </p>
       </div>
@@ -608,9 +581,5 @@
   <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
   <!-- Lógica general de la página -->
   <script src="js/main.js"></script>
-  <!-- Escenas 3D (módulos ES: se cargan diferidos por naturaleza) -->
-  <script type="module" src="js/obelisco3d.js"></script>
-  <script type="module" src="js/flor3d.js"></script>
-  <script type="module" src="js/manto3d.js"></script>
 </body>
 </html>
