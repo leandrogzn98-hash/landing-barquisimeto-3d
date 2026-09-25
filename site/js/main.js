@@ -20,17 +20,17 @@
   -------------------------------------------------------------------------- */
   var VIDEOS_AMBIENTE = [
     {
-      src: '../assets/video/video-obelisco.mp4',
+      src: '../assets/video/video-obelisco.mp4?v=20260925b',
       titulo: 'Órbita sobre el Obelisco',
       descripcion: 'Vuelo de dron alrededor del monumento al atardecer.'
     },
     {
-      src: '../assets/video/video-flor.mp4',
+      src: '../assets/video/video-flor.mp4?v=20260925b',
       titulo: 'Flor de Venezuela al atardecer',
       descripcion: 'Órbita aérea sobre los pétalos blancos.'
     },
     {
-      src: '../assets/video/video-manto.mp4',
+      src: '../assets/video/video-manto.mp4?v=20260925b',
       titulo: 'Manto de María al anochecer',
       descripcion: 'La Virgen cinética entre las dos torres.'
     }
