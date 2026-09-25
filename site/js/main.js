@@ -185,14 +185,24 @@
       yPercent: 16,        // desciende…
       scale: 0.88,         // …y se achica levemente
       rotation: 1.2,       // mecida sutil, como si respirara
-      ease: 'none'
+      ease: 'none',
+      duration: 0.85
     }, 0)
     .to('#obelisco-sol', {
       yPercent: 34,        // el sol "baja" en el cielo
       scale: 1.18,
-      ease: 'none'
+      ease: 'none',
+      duration: 0.85
     }, 0)
-    .to('.hint-obelisco', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
+    .to('.hint-obelisco', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0)
+    // Al final, el contenido se disuelve en el atardecer para que el
+    // mensaje de cierre quede limpio sobre el cielo (sin traslapes).
+    .to('#obelisco-contenido', {
+      autoAlpha: 0,
+      yPercent: -6,
+      ease: 'none',
+      duration: 0.2
+    }, 0.8);
 
   /* ---- 5.2 FLOR: el scroll abre y cierra los pétalos ----
      progreso 0 → 0.5 : apertura 0 → 1 (se abre)
@@ -214,6 +224,28 @@
     }
   });
 
+  // Al final de la escena, el título se disuelve y el canvas se atenúa
+  // para que el mensaje de cierre quede limpio sobre el fondo estrellado.
+  gsap.timeline({
+    scrollTrigger: {
+      trigger: '#escena-flor',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1
+    }
+  })
+    .to('#flor-contenido', {
+      autoAlpha: 0,
+      yPercent: -6,
+      ease: 'none',
+      duration: 0.2
+    }, 0.8)
+    .to('#flor3d-escena', {
+      opacity: 0.3,
+      ease: 'none',
+      duration: 0.2
+    }, 0.8);
+
   /* ---- 5.3 MANTO: close-up progresivo ----
      La foto escala de 1 a 1.8 con un leve paneo: es como si la cámara
      se acercara a la Virgen mientras lees. */
@@ -230,9 +262,23 @@
       scale: 1.8,          // close-up
       xPercent: -3,        // paneo leve a la izquierda…
       yPercent: 5,         // …y hacia abajo, siguiendo a la Virgen
-      ease: 'none'
+      ease: 'none',
+      duration: 0.85
     }, 0)
-    .to('.hint-manto', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
+    .to('.hint-manto', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0)
+    // Al final, el título se disuelve y la foto se atenúa para que el
+    // mensaje de cierre quede limpio (sin traslapes).
+    .to('#manto-contenido', {
+      autoAlpha: 0,
+      yPercent: -6,
+      ease: 'none',
+      duration: 0.2
+    }, 0.8)
+    .to('#manto-foto', {
+      opacity: 0.35,
+      ease: 'none',
+      duration: 0.2
+    }, 0.8);
 
   // Recalcular los puntos de fijado cuando todo (incluidas imágenes) cargue
   window.addEventListener('load', function () { ScrollTrigger.refresh(); });
