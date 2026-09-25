@@ -1,11 +1,11 @@
 /* ============================================================================
    main.js — Lógica general de la landing
    ----------------------------------------------------------------------------
-   1. Catálogo de videos ambiente (AQUÍ se agrega el 3er video cuando llegue)
+   1. Catálogo de videos ambiente
    2. Navegación + barra de progreso
-   3. Animaciones de entrada del hero (GSAP)
-   4. Revelados por scroll, parallax de imágenes y contadores (ScrollTrigger)
-   5. Reproducción inteligente de los videos (solo cuando se ven en pantalla)
+   3. Tarjetas de video generadas desde el catálogo + reproducción inteligente
+   4. Animaciones GSAP: entrada del hero y revelados por scroll
+   5. Escenas fijadas por monumento (Obelisco / Flor / Manto) con scrub
    ============================================================================ */
 (function () {
   'use strict';
@@ -116,7 +116,7 @@
   /* --------------------------------------------------------------------------
      4. ANIMACIONES GSAP
      Si GSAP no cargó (sin conexión al CDN), la página sigue legible:
-     simplemente no habrá animaciones.
+     simplemente no habrá animaciones ni escenas fijadas.
   -------------------------------------------------------------------------- */
   if (!window.gsap) { return; }
   gsap.registerPlugin(ScrollTrigger);
@@ -141,52 +141,99 @@
     });
   });
 
-  // ---- Parallax sutil en las fotos de los monumentos ----
-  if (!reduceMovimiento) {
-    gsap.utils.toArray('[data-parallax]').forEach(function (img) {
-      gsap.fromTo(img, { yPercent: -6 }, {
-        yPercent: 6,
-        ease: 'none',
-        scrollTrigger: { trigger: img.closest('section'), start: 'top bottom', end: 'bottom top', scrub: true }
-      });
+  /* --------------------------------------------------------------------------
+     5. ESCENAS FIJADAS (una por monumento)
+     --------------------------------------------------------------------------
+     Patrón por escena:
+       · ScrollTrigger fija el ".escena-stage" (100vh) en pantalla
+         (pin, sin espacio extra: las tarjetas desfilan POR ENCIMA).
+       · Otro ScrollTrigger con scrub anima el escenario según el avance:
+         Obelisco = la foto baja/achica y el sol se desplaza;
+         Flor     = los pétalos se abren (0→1) y se cierran (1→0);
+         Manto    = la foto hace zoom de acercamiento (close-up).
+     Con "reducir movimiento" no se fija ni se anima nada: el contenido
+     queda apilado en flujo normal y todo sigue legible.
+  -------------------------------------------------------------------------- */
+  if (reduceMovimiento) { return; }
+
+  // Fija un escenario en pantalla mientras su sección hace scroll.
+  function fijarEscena(idSeccion, idStage) {
+    ScrollTrigger.create({
+      trigger: idSeccion,
+      start: 'top top',
+      end: 'bottom bottom',
+      pin: idStage,
+      pinSpacing: false,   // las tarjetas suben POR ENCIMA del escenario
+      anticipatePin: 1     // evita saltos al fijar/liberar
     });
   }
 
-  // ---- Contadores animados (75 m, 16 pétalos, 3.772 piezas…) ----
-  document.querySelectorAll('[data-contador]').forEach(function (el) {
-    var destino = parseFloat(el.getAttribute('data-contador'));
-    var decimales = parseInt(el.getAttribute('data-decimales') || '0', 10);
-    var prefijo = el.getAttribute('data-prefijo') || '';
-    var sufijo = el.getAttribute('data-sufijo') || '';
-
-    // Formato es-VE: miles con punto (3.772), decimales con coma (47,14)
-    function formato(n) {
-      return n.toLocaleString('es-VE', {
-        minimumFractionDigits: decimales,
-        maximumFractionDigits: decimales
-      });
+  /* ---- 5.1 OBELISCO: el guardián y el sol ----
+     Al avanzar el scroll: la foto desciende un poco y se achica,
+     el sol se desplaza hacia abajo detrás, y la pista "Sigue bajando"
+     se desvanece al empezar. */
+  fijarEscena('#escena-obelisco', '#obelisco-stage');
+  gsap.timeline({
+    scrollTrigger: {
+      trigger: '#escena-obelisco',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1             // la animación sigue al scroll, sin retardos
     }
+  })
+    .to('#obelisco-marco', {
+      yPercent: 16,        // desciende…
+      scale: 0.88,         // …y se achica levemente
+      rotation: 1.2,       // mecida sutil, como si respirara
+      ease: 'none'
+    }, 0)
+    .to('#obelisco-sol', {
+      yPercent: 34,        // el sol "baja" en el cielo
+      scale: 1.18,
+      ease: 'none'
+    }, 0)
+    .to('.hint-obelisco', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
 
-    function pintar(valor) {
-      el.textContent = prefijo + formato(valor) + sufijo;
-    }
-
-    if (reduceMovimiento) { pintar(destino); return; }
-
-    var estado = { valor: 0 };
-    ScrollTrigger.create({
-      trigger: el,
-      start: 'top 90%',
-      once: true,
-      onEnter: function () {
-        gsap.to(estado, {
-          valor: destino,
-          duration: 1.6,
-          ease: 'power2.out',
-          onUpdate: function () { pintar(estado.valor); },
-          onComplete: function () { pintar(destino); }
-        });
+  /* ---- 5.2 FLOR: el scroll abre y cierra los pétalos ----
+     progreso 0 → 0.5 : apertura 0 → 1 (se abre)
+     progreso 0.5 → 1 : apertura 1 → 0 (se cierra)
+     Se llama a window.__flor3d.setApertura(), que expone flor3d.js.
+     (El módulo 3D carga diferido: por eso se verifica que exista.) */
+  fijarEscena('#escena-flor', '#flor-stage');
+  ScrollTrigger.create({
+    trigger: '#escena-flor',
+    start: 'top top',
+    end: 'bottom bottom',
+    scrub: 1,
+    onUpdate: function (st) {
+      var p = st.progress;
+      var apertura = p < 0.5 ? p * 2 : (1 - p) * 2; // 0→1→0
+      if (window.__flor3d && typeof window.__flor3d.setApertura === 'function') {
+        window.__flor3d.setApertura(apertura);
       }
-    });
+    }
   });
+
+  /* ---- 5.3 MANTO: close-up progresivo ----
+     La foto escala de 1 a 1.8 con un leve paneo: es como si la cámara
+     se acercara a la Virgen mientras lees. */
+  fijarEscena('#escena-manto', '#manto-stage');
+  gsap.timeline({
+    scrollTrigger: {
+      trigger: '#escena-manto',
+      start: 'top top',
+      end: 'bottom bottom',
+      scrub: 1
+    }
+  })
+    .to('#manto-foto', {
+      scale: 1.8,          // close-up
+      xPercent: -3,        // paneo leve a la izquierda…
+      yPercent: 5,         // …y hacia abajo, siguiendo a la Virgen
+      ease: 'none'
+    }, 0)
+    .to('.hint-manto', { autoAlpha: 0, duration: 0.08, ease: 'none' }, 0);
+
+  // Recalcular los puntos de fijado cuando todo (incluidas imágenes) cargue
+  window.addEventListener('load', function () { ScrollTrigger.refresh(); });
 })();
