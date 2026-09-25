@@ -80,3 +80,85 @@ body {
     scroll-behavior: auto;
   }
 }
+
+/* ============================================================================
+   ESCENAS FIJADAS (pinned) — Obelisco, Flor y Manto
+   ----------------------------------------------------------------------------
+   Cada escena es: un "stage" de 100vh que ScrollTrigger fija en pantalla
+   (pin) mientras las tarjetas de información desfilan por encima en el
+   flujo normal del documento. Si el JS no corre (o el usuario prefiere
+   reducir movimiento), todo queda apilado y legible sin fijados.
+   ============================================================================ */
+
+/* El escenario: ocupa exactamente la pantalla (svh = mejor en móviles) */
+.escena-stage {
+  position: relative;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* Cielo crepuscular de la escena del Obelisco: degradado índigo → ámbar */
+.cielo-crepusculo {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    #060613 0%,
+    #141433 26%,
+    #3d1d4e 46%,
+    #8a2f4d 62%,
+    #e07b39 76%,
+    #f7b955 84%,
+    #241016 100%
+  );
+}
+
+/* El sol: círculo con resplandor, detrás del obelisco */
+.sol {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: min(60vw, 400px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    #fff6dd 0%,
+    #ffd27a 26%,
+    #f2a33c 52%,
+    rgba(242, 163, 60, 0.25) 68%,
+    rgba(242, 163, 60, 0) 74%
+  );
+  filter: blur(3px);
+}
+
+/* Contenedor de las tarjetas que desfilan sobre el escenario fijado */
+.escena-tarjetas {
+  position: relative;
+  z-index: 20;
+}
+
+/* Cada tarjeta vive en su propia "pantalla" de scroll para darles aire */
+.tarjeta-wrap {
+  min-height: 85vh;
+  min-height: 85svh;
+  display: flex;
+  align-items: center;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* El mensaje de cierre de cada escena: ocupa una pantalla completa */
+.cierre-wrap {
+  min-height: 100vh;
+  min-height: 100svh;
+  justify-content: center;
+  text-align: center;
+}
+
+/* La foto del Manto: margen para el zoom del scroll sin mostrar bordes */
+#manto-foto {
+  transform-origin: 50% 42%; /* el zoom se centra en la Virgen */
+}
