@@ -1,0 +1,135 @@
+
+/* ============================================================================
+   CAPA AWWWARDS — preloader, cursor, marquee, sonido, splits y Lenis
+   (se suma a los estilos base sin tocarlos)
+   ============================================================================ */
+
+/* ---------- Lenis: scroll suave (clases recomendadas por la librería) ---------- */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* ---------- Preloader ---------- */
+#preloader {
+  position: fixed; inset: 0; z-index: 100;
+  background: #05060a;
+  display: flex; align-items: center; justify-content: center;
+}
+.preloader-centro { text-align: center; }
+.preloader-marca {
+  font-family: Fraunces, Georgia, serif;
+  font-size: 1.1rem; letter-spacing: 0.35em; text-transform: uppercase;
+  color: #f4efe6;
+}
+.preloader-marca span { color: #f2a33c; font-style: italic; letter-spacing: 0.1em; }
+.preloader-num {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 300;
+  font-size: clamp(4rem, 14vw, 7rem);
+  line-height: 1; color: #f4efe6;
+  margin: 0.6rem 0 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+.preloader-sub {
+  font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: rgba(244, 239, 230, 0.45);
+}
+/* línea de progreso del preloader */
+#preloader::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%;
+  background: linear-gradient(90deg, #c2703d, #f2a33c, #8b5cf6);
+  transform-origin: left; transform: scaleX(var(--carga, 0));
+}
+
+/* ---------- Cursor personalizado ---------- */
+#cursor-punto, #cursor-anillo {
+  position: fixed; top: 0; left: 0; z-index: 99;
+  pointer-events: none; border-radius: 9999px;
+  opacity: 0; /* main.js lo enciende al primer movimiento */
+}
+#cursor-punto { width: 6px; height: 6px; background: #f2a33c; }
+#cursor-anillo {
+  width: 34px; height: 34px;
+  border: 1px solid rgba(242, 163, 60, 0.65);
+  transition: width 0.25s ease, height 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+#cursor-anillo.grande {
+  width: 64px; height: 64px;
+  border-color: rgba(242, 163, 60, 0.9);
+  background: rgba(242, 163, 60, 0.08);
+}
+@media (pointer: coarse) {
+  #cursor-punto, #cursor-anillo { display: none; }
+}
+
+/* ---------- Marquee infinito ---------- */
+.marquee {
+  overflow: hidden; white-space: nowrap;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1.1rem 0;
+  background: rgba(11, 13, 19, 0.5);
+}
+.marquee-pista {
+  display: inline-flex;
+  animation: marquee 28s linear infinite;
+  will-change: transform;
+}
+.marquee-pista span {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 300; font-style: italic;
+  font-size: clamp(1.4rem, 4vw, 2.4rem);
+  color: rgba(244, 239, 230, 0.35);
+  padding-right: 0.5em;
+}
+@keyframes marquee {
+  to { transform: translateX(-50%); }
+}
+
+/* ---------- Botón de sonido ambiente ---------- */
+.btn-sonido {
+  position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 70;
+  width: 52px; height: 52px; border-radius: 9999px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 6, 10, 0.55);
+  border: 1px solid rgba(242, 163, 60, 0.4);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+.btn-sonido:hover { border-color: #f2a33c; transform: scale(1.06); }
+.btn-sonido .eq { display: flex; align-items: flex-end; gap: 3px; height: 18px; }
+.btn-sonido .eq i {
+  width: 3px; height: 5px; border-radius: 2px; background: #f2a33c;
+  opacity: 0.45; transition: opacity 0.3s;
+}
+.btn-sonido.sonando .eq i { opacity: 1; animation: eq 0.9s ease-in-out infinite; }
+.btn-sonido.sonando .eq i:nth-child(2) { animation-delay: 0.18s; }
+.btn-sonido.sonando .eq i:nth-child(3) { animation-delay: 0.36s; }
+@keyframes eq {
+  0%, 100% { height: 5px; }
+  50% { height: 17px; }
+}
+
+/* ---------- Splits de texto (chars / words) ---------- */
+.char-wrap, .word-wrap { display: inline-block; overflow: hidden; vertical-align: top; }
+.char, .word { display: inline-block; will-change: transform; }
+/* el espacio entre palabras sobrevive al split */
+.word-wrap { margin-right: 0.24em; }
+.word-wrap:last-child { margin-right: 0; }
+
+/* ---------- Nav que se oculta al bajar ---------- */
+#nav.oculta { transform: translateY(-110%); }
+
+/* ---------- Botones magnéticos: el transform lo pone GSAP ---------- */
+.btn-primary, .btn-ghost { will-change: transform; }
+
+/* Sin animación si el usuario prefiere reducir movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-pista { animation: none; }
+  .btn-sonido.sonando .eq i { animation: none; }
+}
+
+/* Oculta el cursor nativo cuando el cursor personalizado está activo */
+html.cursor-on, html.cursor-on * { cursor: none !important; }

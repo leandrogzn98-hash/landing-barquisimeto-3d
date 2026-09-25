@@ -1,17 +1,28 @@
 /* ============================================================================
-   flor3d.js — La Flor de Venezuela en 3D interactivo (Three.js)
+   flor3d.js — La Flor de Venezuela REAL en 3D (Three.js)
    ----------------------------------------------------------------------------
-   ¿Qué hace este archivo?
-     1. Crea una escena 3D nocturna con la flor como protagonista.
-     2. Modela los 16 pétalos con código (geometría extruida + curvatura),
-        cada uno con su "bisagra" para abrirse y cerrarse.
-     3. Añade tallo, corola, base, partículas flotantes y luces crepusculares.
-     4. Permite girar con el ratón/dedos (OrbitControls) y abrir/cerrar
-        los pétalos con los botones de la página o en modo automático.
-     5. Cuida el rendimiento: limita la resolución, y pausa el render
-        cuando la sección no está en pantalla.
+   Reescritura fiel al monumento de Fruto Vivas (ver foto de referencia):
+     · 16 PANELES METÁLICOS trapezoidales grandes, levemente curvados,
+       color acero (metalness 0.85, roughness 0.4) — NO pétalos orgánicos.
+     · Paneles montados en BRAZOS alrededor de una COLUMNA CENTRAL de acero
+       oscuro, sobre una PLATAFORMA circular.
+     · Cerrados (apertura 0) forman un capullo vertical; abiertos (apertura 1)
+       se despliegan ~75° hacia afuera.
+     · Núcleo: pistilos (cilindros pequeños con puntas emisivas).
 
-   Se carga como módulo ES (ver el <script type="importmap"> en index.html).
+   Además: cielo crepuscular, sol bajo, partículas de polvo de luz, controles
+   orbitales con inercia y pausa del render fuera de pantalla.
+
+   Contrato (igual que obelisco3d.js y manto3d.js):
+     · Módulo ES: importa 'three' y OrbitControls (importmap en index.html).
+     · Canvas #flor3d-canvas dentro de #flor3d-escena; sin WebGL muestra
+       #flor3d-error y no revienta.
+     · Expone window.__flor3d = { estado, TOTAL_PETALOS, setApertura,
+       update(p, dt), resize }.
+     · Los pétalos los mueve setApertura (main.js la llama con el scroll);
+       update(p) SOLO mueve la cámara (órbita lenta con el scroll).
+     · Botones #btn-abrir / #btn-cerrar y checkbox #chk-auto con el mismo
+       comportamiento de siempre (modo manual vs. ciclo automático).
    ============================================================================ */
 
 import * as THREE from 'three';
@@ -20,9 +31,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 /* ------------------------- 1. CONFIGURACIÓN ------------------------- */
 const ID_CONTENEDOR = 'flor3d-escena';
 const ID_CANVAS = 'flor3d-canvas';
+const ID_ERROR = 'flor3d-error';
 const TOTAL_PETALOS = 16;          // como la Flor de Venezuela real
-const ANGULO_CERRADO = -1.18;      // radianes: pétalos hacia arriba (capullo)
-const ANGULO_ABIERTO = 0.10;       // radianes: pétalos desplegados
+const ANGULO_CERRADO = -1.18;      // radianes: paneles hacia arriba (capullo)
+const ANGULO_ABIERTO = 0.13;       // radianes: ~75° de despliegue hacia afuera
 
 // Estado de la animación (los botones de la página lo modifican)
 const estado = {
@@ -33,43 +45,93 @@ const estado = {
   relojAuto: 0,       // acumulador para el ciclo automático
 };
 
-/* ------------------------- 2. ESCENA BASE ------------------------- */
 const contenedor = document.getElementById(ID_CONTENEDOR);
 const canvas = document.getElementById(ID_CANVAS);
+
+function mostrarError() {
+  const d = document.getElementById(ID_ERROR);
+  if (d) d.classList.replace('hidden', 'flex');
+}
+if (!contenedor || !canvas) {
+  mostrarError();
+  throw new Error('[flor3d] No se encontró el contenedor o el canvas.');
+}
 
 let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 } catch (e) {
   // Sin WebGL no hay 3D: mostramos el mensaje de respaldo del HTML.
-  document.getElementById('flor3d-error').classList.replace('hidden', 'flex');
+  mostrarError();
   throw e;
 }
-// Rendimiento: no renderizar a más del doble de píxeles de la pantalla.
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 renderer.toneMapping = THREE.ACESFilmicToneMapping; // look cinematográfico
 renderer.toneMappingExposure = 1.1;
 
+/* ------------------------- 2. ESCENA BASE ------------------------- */
 const escena = new THREE.Scene();
-escena.background = new THREE.Color(0x05060a);
-escena.fog = new THREE.Fog(0x05060a, 18, 46); // la distancia se pierde en la noche
+escena.fog = new THREE.Fog(0x3a2418, 18, 52); // el atardecer se traga la distancia
 
-const camara = new THREE.PerspectiveCamera(42, 1, 0.1, 120);
-camara.position.set(0, 4.6, 10.5);
+const camara = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
+camara.position.set(0, 4.6, 11);
 
-// Controles: girar, acercar y paneo suave con inercia
+// Controles: girar y acercar con inercia (la cámara la dirige el scroll)
 const controles = new OrbitControls(camara, renderer.domElement);
-controles.target.set(0, 1.6, 0);
+controles.target.set(0, 3.2, 0);
 controles.enableDamping = true;
 controles.dampingFactor = 0.06;
 controles.minDistance = 5;
 controles.maxDistance = 18;
 controles.maxPolarAngle = 1.45;   // no deja pasar la cámara bajo el suelo
-controles.autoRotate = true;      // vitrina giratoria…
-controles.autoRotateSpeed = 0.7;
-controles.addEventListener('start', () => { controles.autoRotate = false; }); // …hasta que el usuario toma el control
+controles.autoRotate = false;     // la cámara la dirige el scroll
 
-/* ------------------------- 3. LUCES CREPUSCULARES ------------------------- */
+/* ------------------------- 3. CIELO CREPUSCULAR ------------------------- */
+// Domo invertido con degradado: noche cerrada arriba, naranja quemado al horizonte.
+function crearCielo(radio) {
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+    uniforms: {
+      arriba: { value: new THREE.Color(0x0b0b1a) },
+      horizonte: { value: new THREE.Color(0xff9a56) },
+      abajo: { value: new THREE.Color(0x07070d) },
+    },
+    vertexShader: `
+      varying vec3 vDir;
+      void main() {
+        vDir = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 arriba; uniform vec3 horizonte; uniform vec3 abajo;
+      varying vec3 vDir;
+      void main() {
+        float h = vDir.y;
+        vec3 col = h >= 0.0
+          ? mix(horizonte, arriba, smoothstep(0.0, 0.55, h))
+          : mix(horizonte, abajo, smoothstep(0.0, -0.25, h));
+        float sol = pow(max(0.0, dot(normalize(vec3(vDir.x, 0.0, vDir.z)), vec3(0.0, 0.0, -1.0))), 6.0)
+                  * (1.0 - smoothstep(0.0, 0.35, abs(h)));
+        col += vec3(1.0, 0.55, 0.25) * sol * 0.55;
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+  escena.add(new THREE.Mesh(new THREE.SphereGeometry(radio, 32, 20), mat));
+}
+crearCielo(160);
+
+// Sol: disco emisivo bajo en el horizonte
+const sol = new THREE.Mesh(
+  new THREE.CircleGeometry(5, 40),
+  new THREE.MeshBasicMaterial({ color: 0xffc37a, fog: false })
+);
+sol.position.set(-20, 7, -85);
+sol.lookAt(0, 7, 0);
+escena.add(sol);
+
+/* ------------------------- 4. LUCES CREPUSCULARES ------------------------- */
 escena.add(new THREE.HemisphereLight(0x6f5fb0, 0x0a0a12, 0.55)); // cielo violeta / suelo oscuro
 
 const solPoniente = new THREE.DirectionalLight(0xffb066, 2.0);  // "hora dorada"
@@ -81,25 +143,19 @@ contraluz.position.set(6, 4, -6);
 escena.add(contraluz);
 
 const corazon = new THREE.PointLight(0xffc37a, 26, 14, 2);       // brillo del centro de la flor
-corazon.position.set(0, 2.3, 0);
+corazon.position.set(0, 3.4, 0);
 escena.add(corazon);
 
-/* ------------------------- 4. SUELO Y PARTÍCULAS ------------------------- */
+/* ------------------------- 5. SUELO Y PARTÍCULAS ------------------------- */
 const suelo = new THREE.Mesh(
-  new THREE.CircleGeometry(34, 48),
+  new THREE.CircleGeometry(40, 48),
   new THREE.MeshStandardMaterial({ color: 0x07080d, roughness: 0.95 })
 );
 suelo.rotation.x = -Math.PI / 2;
 escena.add(suelo);
 
-const rejilla = new THREE.GridHelper(44, 44, 0x3a2a18, 0x171208);
-rejilla.position.y = 0.01;
-rejilla.material.transparent = true;
-rejilla.material.opacity = 0.35;
-escena.add(rejilla);
-
 // Polvo de luz flotando (Points = la forma más barata de dibujar partículas)
-const N_PARTICULAS = 380;
+const N_PARTICULAS = 300;
 const posParticulas = new Float32Array(N_PARTICULAS * 3);
 const velParticulas = new Float32Array(N_PARTICULAS);
 for (let i = 0; i < N_PARTICULAS; i++) {
@@ -118,130 +174,177 @@ const particulas = new THREE.Points(geoParticulas, new THREE.PointsMaterial({
 }));
 escena.add(particulas);
 
-/* ------------------------- 5. LA FLOR ------------------------- */
+/* ------------------------- 6. LA FLOR DE VENEZUELA ------------------------- */
 const flor = new THREE.Group();
 escena.add(flor);
 
-const metalOscuro = new THREE.MeshStandardMaterial({
+const aceroOscuro = new THREE.MeshStandardMaterial({
   color: 0x2b2f36, metalness: 0.9, roughness: 0.45,
 });
 
-// — Tallo y base —
-const tallo = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 1.3, 24), metalOscuro);
-tallo.position.y = 0.65;
-flor.add(tallo);
-
-const base = new THREE.Mesh(new THREE.CylinderGeometry(4.1, 4.4, 0.28, 48), metalOscuro);
-base.position.y = 0.14;
-flor.add(base);
+// — Plataforma circular (como la base real del monumento) —
+const plataforma = new THREE.Mesh(new THREE.CylinderGeometry(4.3, 4.6, 0.35, 48), aceroOscuro);
+plataforma.position.y = 0.175;
+flor.add(plataforma);
 
 const anillo = new THREE.Mesh(
-  new THREE.RingGeometry(3.55, 3.75, 64),
+  new THREE.RingGeometry(3.7, 3.9, 64),
   new THREE.MeshBasicMaterial({ color: 0xf2a33c, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
 );
 anillo.rotation.x = -Math.PI / 2;
-anillo.position.y = 0.29;
+anillo.position.y = 0.36;
 flor.add(anillo);
 
-// — Corola central (de donde nacen los pétalos) —
-const corola = new THREE.Mesh(new THREE.SphereGeometry(0.55, 32, 24), metalOscuro);
-corola.scale.y = 0.7;
-corola.position.y = 1.35;
-flor.add(corola);
+// — Columna central de acero oscuro (el "tallo" estructural real) —
+const ALT_COLUMNA = 3.0;
+const columna = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.6, ALT_COLUMNA, 24), aceroOscuro);
+columna.position.y = 0.35 + ALT_COLUMNA / 2;
+flor.add(columna);
 
-// — Pistilo luminoso —
-const pistilo = new THREE.Mesh(
-  new THREE.SphereGeometry(0.22, 24, 18),
-  new THREE.MeshStandardMaterial({ color: 0xffd9a0, emissive: 0xff9a2e, emissiveIntensity: 2.2 })
-);
-pistilo.position.y = 1.85;
-flor.add(pistilo);
+// — Núcleo superior (de donde nacen los brazos) —
+const nucleo = new THREE.Mesh(new THREE.SphereGeometry(0.55, 32, 24), aceroOscuro);
+nucleo.scale.y = 0.7;
+nucleo.position.y = 0.35 + ALT_COLUMNA;
+flor.add(nucleo);
 
-/* ----- 5.1 Geometría del pétalo (una sola, reutilizada 16 veces) -----
-   Se dibuja el contorno 2D de un pétalo, se extruye (se le da grosor),
-   se acuesta para que apunte hacia afuera (+Z) y se le da curvatura
-   de "cuchara" moviendo sus vértices. */
-function crearGeometriaPetalo() {
-  const LONGITUD = 3.4, ANCHO = 1.25, GROSOR = 0.08;
+// — Pistilos: cilindros pequeños con puntas emisivas —
+const matPistilo = new THREE.MeshStandardMaterial({
+  color: 0xffd9a0, emissive: 0xff9a2e, emissiveIntensity: 2.0,
+});
+const pistilos = [];
+for (let i = 0; i < 8; i++) {
+  const a = (i / 8) * Math.PI * 2;
+  const vastago = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.06, 0.7, 8), aceroOscuro);
+  vastago.position.set(Math.cos(a) * 0.28, 0.35 + ALT_COLUMNA + 0.35, Math.sin(a) * 0.28);
+  const punta = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), matPistilo);
+  punta.position.set(Math.cos(a) * 0.28, 0.35 + ALT_COLUMNA + 0.72, Math.sin(a) * 0.28);
+  flor.add(vastago, punta);
+  pistilos.push(punta);
+}
 
-  const contorno = new THREE.Shape();
-  contorno.moveTo(0, 0);
-  contorno.bezierCurveTo(ANCHO * 0.62, LONGITUD * 0.10, ANCHO * 0.70, LONGITUD * 0.48, ANCHO * 0.30, LONGITUD * 0.80);
-  contorno.quadraticCurveTo(ANCHO * 0.14, LONGITUD * 0.96, 0, LONGITUD);
-  contorno.quadraticCurveTo(-ANCHO * 0.14, LONGITUD * 0.96, -ANCHO * 0.30, LONGITUD * 0.80);
-  contorno.bezierCurveTo(-ANCHO * 0.70, LONGITUD * 0.48, -ANCHO * 0.62, LONGITUD * 0.10, 0, 0);
+/* ----- 6.1 Geometría del panel metálico (una sola, reutilizada 16 veces) -----
+   Trapezoide extruido: angosto en la base, ancho en la punta, como los
+   paneles reales. Se acuesta para apuntar hacia afuera (+Z) y se le da una
+   curvatura leve de chapa metálica. */
+function crearGeometriaPanel() {
+  const LARGO = 3.6, ANCHO_BASE = 1.1, ANCHO_PUNTA = 1.9, GROSOR = 0.07;
 
-  const geo = new THREE.ExtrudeGeometry(contorno, {
-    depth: GROSOR, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.03,
-    bevelSegments: 2, curveSegments: 24, steps: 6,
+  const s = new THREE.Shape();
+  s.moveTo(-ANCHO_BASE / 2, 0);
+  s.lineTo(ANCHO_BASE / 2, 0);
+  s.lineTo(ANCHO_PUNTA / 2, LARGO);
+  s.lineTo(-ANCHO_PUNTA / 2, LARGO);
+  s.closePath();
+
+  const geo = new THREE.ExtrudeGeometry(s, {
+    depth: GROSOR, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02,
+    bevelSegments: 1, curveSegments: 8, steps: 8,
   });
   geo.translate(0, 0, -GROSOR / 2);
   geo.rotateX(Math.PI / 2); // el largo queda en +Z (hacia afuera), el grosor en Y
 
-  // Curvatura: punta elevada y bordes algo caídos → forma de cuchara
+  // Curvatura leve: punta algo elevada y centro acanalado → chapa metálica
   const pos = geo.attributes.position;
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    const t = THREE.MathUtils.clamp(v.z / LONGITUD, 0, 1); // 0 = base, 1 = punta
-    const borde = Math.abs(Math.sin((v.x / ANCHO) * Math.PI * 0.5)); // 0 centro → ~1 bordes
-    v.y += 0.55 * t * t - 0.30 * borde * t;
+    const t = THREE.MathUtils.clamp(v.z / LARGO, 0, 1); // 0 = base, 1 = punta
+    const centro = 1 - Math.min(1, Math.abs(v.x) / (ANCHO_PUNTA / 2));
+    v.y += 0.38 * t * t - 0.10 * centro * t;
     pos.setXYZ(i, v.x, v.y, v.z);
   }
   geo.computeVertexNormals();
   return geo;
 }
 
-const geoPetalo = crearGeometriaPetalo();
+const geoPanel = crearGeometriaPanel();
 
-// ----- 5.2 Los 16 pétalos: soporte (reparto radial) + bisagra (apertura) -----
+// ----- 6.2 Los 16 paneles: soporte (reparto radial) + brazo + bisagra -----
 const bisagras = [];
+const Y_BISAGRA = 0.35 + ALT_COLUMNA - 0.25;
+const R_BISAGRA = 1.05;
 for (let i = 0; i < TOTAL_PETALOS; i++) {
   const material = new THREE.MeshStandardMaterial({
-    // cobre metálico con leve variación por pétalo para que no se vea plano
-    color: new THREE.Color().setHSL(0.075 + (i % 2) * 0.012, 0.58, 0.40 + (i % 3) * 0.02),
+    // acero con leve variación por panel para que no se vea plano
+    color: new THREE.Color().setHSL(0.58, 0.04, 0.60 + (i % 3) * 0.015),
     metalness: 0.85,
-    roughness: 0.32,
-    emissive: 0x2a1503,
-    emissiveIntensity: 0.8,
+    roughness: 0.4,
+    emissive: 0x1a1208,
+    emissiveIntensity: 0.5,
     side: THREE.DoubleSide, // visible por dentro cuando está cerrada
   });
 
   const soporte = new THREE.Group();
   soporte.rotation.y = (i / TOTAL_PETALOS) * Math.PI * 2; // reparte en círculo
 
+  // Brazo: del centro de la columna hasta la bisagra (como la estructura real)
+  const brazo = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, R_BISAGRA, 8), aceroOscuro);
+  brazo.rotation.z = Math.PI / 2;
+  brazo.position.set(R_BISAGRA / 2, Y_BISAGRA, 0);
+  soporte.add(brazo);
+
   const bisagra = new THREE.Group();
-  bisagra.position.set(0, 1.35, 0.45); // nace del borde de la corola
+  bisagra.position.set(0, Y_BISAGRA, R_BISAGRA); // nace en la punta del brazo
   bisagra.rotation.x = ANGULO_CERRADO; // empieza cerrada (capullo)
 
-  bisagra.add(new THREE.Mesh(geoPetalo, material));
+  bisagra.add(new THREE.Mesh(geoPanel, material));
   soporte.add(bisagra);
   flor.add(soporte);
   bisagras.push(bisagra);
 }
 
-/* ------------------------- 6. CONTROLES DE LA PÁGINA ------------------------- */
+/* ------------------------- 7. CONTROLES DE LA PÁGINA ------------------------- */
 const btnAbrir = document.getElementById('btn-abrir');
 const btnCerrar = document.getElementById('btn-cerrar');
 const chkAuto = document.getElementById('chk-auto');
 
 function modoManual(objetivo) {
   estado.automatico = false;
-  chkAuto.checked = false;
+  if (chkAuto) chkAuto.checked = false;
   estado.objetivo = objetivo;
 }
-btnAbrir.addEventListener('click', () => modoManual(1));
-btnCerrar.addEventListener('click', () => modoManual(0));
-chkAuto.addEventListener('change', () => {
+if (btnAbrir) btnAbrir.addEventListener('click', () => modoManual(1));
+if (btnCerrar) btnCerrar.addEventListener('click', () => modoManual(0));
+if (chkAuto) chkAuto.addEventListener('change', () => {
   estado.automatico = chkAuto.checked;
   estado.relojAuto = 0;
 });
 
-/* ------------------------- 7. RENDER LOOP ------------------------- */
-const reloj = new THREE.Clock();
+/* ------- 7.1 Control externo de la apertura (para el scroll de la escena) ----
+   setApertura(v) recibe un número entre 0 (cerrada) y 1 (abierta) y pone los
+   paneles exactamente ahí, sin suavizado: el scroll manda directo.
+   main.js la llama en cada tick del scrub de la escena "Flor" (0→1→0).
+   También apaga el modo automático para que no pelee con el scroll. */
+function setApertura(v) {
+  estado.automatico = false;
+  if (chkAuto) chkAuto.checked = false;
+  const n = Math.min(1, Math.max(0, v));
+  estado.objetivo = n;
+  estado.apertura = n;
+}
 
-function animar() {
-  requestAnimationFrame(animar);
+/* ------------------------- 8. CONTROL POR SCROLL + LOOP ------------------------- */
+const reloj = new THREE.Clock();
+let ultimaP = 0; // último progreso de scroll recibido (0..1)
+
+// update(p): main.js la llama con el scrub del scroll. SOLO mueve la cámara:
+// órbita lenta (azimut = base + p·1.2), radio 11→8.5, altura 4.6→3.4,
+// mirando a y 3.2→2.6. Los paneles los sigue moviendo setApertura.
+function update(p) {
+  ultimaP = THREE.MathUtils.clamp(p || 0, 0, 1);
+}
+
+function aplicarPoseCamara(pe, t) {
+  const az = t * 0.05 + pe * 1.2;                    // deriva lenta + avance del scroll
+  const radio = THREE.MathUtils.lerp(11, 8.5, pe);
+  const y = THREE.MathUtils.lerp(4.6, 3.4, pe);
+  const lookY = THREE.MathUtils.lerp(3.2, 2.6, pe);
+  camara.position.set(radio * Math.sin(az), y, radio * Math.cos(az));
+  controles.target.set(0, lookY, 0);
+}
+
+function tick() {
+  requestAnimationFrame(tick);
 
   // Pausa total cuando la sección no está en pantalla (rendimiento)
   if (!estado.visible || document.hidden) return;
@@ -261,7 +364,7 @@ function animar() {
   // La apertura real persigue al objetivo con suavidad (sin tirones)
   estado.apertura += (estado.objetivo - estado.apertura) * Math.min(1, dt * 2.2);
 
-  // Cada pétalo abre con un leve desfase → se ve orgánico, no robótico
+  // Cada panel abre con un leve desfase → se ve orgánico, no robótico
   for (let i = 0; i < TOTAL_PETALOS; i++) {
     const desfase = (i / TOTAL_PETALOS) * 0.28;
     const a = THREE.MathUtils.smootherstep(
@@ -282,15 +385,19 @@ function animar() {
 
   // El anillo de la base pulsa suavemente
   anillo.material.opacity = 0.4 + Math.sin(t * 2) * 0.18;
-  // El pistilo "respira" luz
-  pistilo.material.emissiveIntensity = 2.0 + Math.sin(t * 2.4) * 0.5;
+  // Los pistilos "respiran" luz
+  for (const punta of pistilos) {
+    punta.material.emissiveIntensity = 2.0 + Math.sin(t * 2.4) * 0.5;
+  }
+
+  aplicarPoseCamara(THREE.MathUtils.smootherstep(ultimaP, 0, 1), t);
 
   controles.update();
   renderer.render(escena, camara);
 }
 
-/* ------------------------- 8. TAMAÑO Y VISIBILIDAD ------------------------- */
-function ajustarTamano() {
+/* ------------------------- 9. TAMAÑO Y VISIBILIDAD ------------------------- */
+function resize() {
   const w = contenedor.clientWidth;
   const h = contenedor.clientHeight;
   if (w === 0 || h === 0) return;
@@ -298,28 +405,15 @@ function ajustarTamano() {
   camara.aspect = w / h;
   camara.updateProjectionMatrix();
 }
-window.addEventListener('resize', ajustarTamano);
-ajustarTamano();
+window.addEventListener('resize', resize);
+resize();
 
 // Pausar cuando la sección sale de la pantalla
 new IntersectionObserver((entradas) => {
   estado.visible = entradas[0].isIntersecting;
 }, { threshold: 0.05 }).observe(contenedor);
 
-/* ------- 8.1 Control externo de la apertura (para el scroll de la escena) ----
-   setApertura(v) recibe un número entre 0 (cerrada) y 1 (abierta) y pone los
-   pétalos exactamente ahí, sin suavizado: el scroll manda directo.
-   main.js la llama en cada tick del scrub de la escena "Flor" (0→1→0).
-   También apaga el modo automático para que no pelee con el scroll. */
-function setApertura(v) {
-  estado.automatico = false;
-  if (chkAuto) chkAuto.checked = false;
-  const n = Math.min(1, Math.max(0, v));
-  estado.objetivo = n;
-  estado.apertura = n;
-}
+// API pública: la página (botones, scroll) y la consola usan esto.
+window.__flor3d = { estado, TOTAL_PETALOS, setApertura, update, resize };
 
-// Utilidad para depurar/aprender desde la consola del navegador:
-window.__flor3d = { estado, TOTAL_PETALOS, setApertura };
-
-animar();
+tick();

@@ -50,6 +50,7 @@
   </script>
 
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/awwwards.css" />
 
   <!-- Clases de componentes con @apply (las compila el Play CDN en el navegador) -->
   <style type="text/tailwindcss">
@@ -158,6 +159,24 @@
   <!-- Grano de cine sobre toda la página (ver styles.css) -->
   <div class="grano" aria-hidden="true"></div>
 
+  <!-- Preloader cinematográfico: contador + cortina (lo dirige main.js) -->
+  <div id="preloader" aria-hidden="true">
+    <div class="preloader-centro">
+      <p class="preloader-marca">BQTO <span>· íconos</span></p>
+      <p class="preloader-num"><span id="preloader-contador">0</span>%</p>
+      <p class="preloader-sub">cargando la ciudad crepuscular</p>
+    </div>
+  </div>
+
+  <!-- Cursor personalizado (solo punteros finos; lo dirige main.js) -->
+  <div id="cursor-punto" aria-hidden="true"></div>
+  <div id="cursor-anillo" aria-hidden="true"></div>
+
+  <!-- Sonido ambiente generativo (Web Audio): se enciende con este botón -->
+  <button id="btn-sonido" class="btn-sonido" type="button" aria-label="Activar sonido ambiente" aria-pressed="false" title="Sonido ambiente">
+    <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+  </button>
+
   <!-- ======================= NAVEGACIÓN ======================= -->
   <nav id="nav" class="fixed top-0 inset-x-0 z-50 transition-all duration-500">
     <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -186,7 +205,7 @@
 
     <div class="relative z-10 max-w-6xl mx-auto px-6 pb-28 pt-40 w-full">
       <p class="eyebrow mb-6 hero-fade">Barquisimeto · Venezuela</p>
-      <h1 class="font-display font-light leading-[0.95] text-[13vw] md:text-[7.5rem]">
+      <h1 class="font-display font-light leading-[0.95] text-[13vw] md:text-[7.5rem]" data-split="chars">
         <span class="block overflow-hidden"><span class="hero-line block">Íconos de la</span></span>
         <span class="block overflow-hidden"><span class="hero-line block italic text-ambar">ciudad crepuscular</span></span>
       </h1>
@@ -231,34 +250,41 @@
       </div>
     </section>
 
+    <!-- Marquee infinito: respiro editorial entre la intro y la primera escena -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-pista">
+        <span>Barquisimeto · Ciudad Crepuscular ·&nbsp;</span><span>Barquisimeto · Ciudad Crepuscular ·&nbsp;</span><span>Barquisimeto · Ciudad Crepuscular ·&nbsp;</span><span>Barquisimeto · Ciudad Crepuscular ·&nbsp;</span><span>Barquisimeto · Ciudad Crepuscular ·&nbsp;</span><span>Barquisimeto · Ciudad Crepuscular ·&nbsp;</span>
+      </div>
+    </div>
+
     <!-- ================================================================
          ESCENA 01 · OBELISCO — "El guardián y el sol"
          ----------------------------------------------------------------
          Escena FIJADA (pinned): el stage de 100vh se queda quieto en
          pantalla (lo fija main.js con ScrollTrigger) mientras las
-         tarjetas desfilan por encima. El scroll también anima:
-           · el obelisco desciende y se achica levemente (scrub),
-           · el sol se desplaza detrás (scrub).
+         tarjetas desfilan por encima. El canvas 3D (obelisco3d.js) pinta
+         el Obelisco real en tiempo real; el scroll dirige la cámara:
+         empieza en contrapicado monumental y sube orbitando.
          ================================================================ -->
     <section id="escena-obelisco" class="escena scroll-mt-20">
 
-      <!-- Escenario fijado: cielo crepuscular + sol + obelisco centrado -->
-      <div id="obelisco-stage" class="escena-stage">
-        <div class="cielo-crepusculo" aria-hidden="true"></div>
-        <div id="obelisco-sol" class="sol" aria-hidden="true"></div>
-
-        <div id="obelisco-contenido" class="relative z-10 h-full flex flex-col items-center justify-center px-6">
-          <p class="eyebrow mb-4">01 · El guardián</p>
-          <h2 class="font-display font-light text-4xl md:text-6xl text-center leading-tight">
-            Obelisco de <span class="italic text-ambar">Barquisimeto</span>
-          </h2>
-          <!-- La foto real del Obelisco: main.js la mece, la baja y la achica con el scroll -->
-          <div id="obelisco-marco" class="img-marco mt-8 w-[58vw] max-w-[280px] md:max-w-[330px]">
-            <img id="obelisco-foto" src="../assets/img/obelisco.jpg"
-                 alt="Obelisco de Barquisimeto a contraluz, torre blanca de concreto con reloj"
-                 class="w-full h-[44vh] md:h-[52vh] object-cover" />
+      <!-- Escenario fijado: Obelisco en 3D real a pantalla completa -->
+      <div id="obelisco-stage" class="escena-stage bg-noche">
+        <div id="obelisco3d-escena" class="absolute inset-0">
+          <canvas id="obelisco-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+          <div id="obelisco3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
+            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
           </div>
-          <p class="hint-obelisco mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Sigue bajando ↓</p>
+        </div>
+
+        <div id="obelisco-contenido" class="absolute inset-0 z-10 pointer-events-none">
+          <div class="h-full flex flex-col items-center px-6 pt-24 md:pt-28 text-center">
+            <p class="eyebrow mb-4">01 · El guardián</p>
+            <h2 class="font-display font-light text-4xl md:text-6xl leading-tight" data-split="words">
+              Obelisco de <span class="italic text-ambar">Barquisimeto</span>
+            </h2>
+            <p class="hint-obelisco mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Sigue bajando · arrastra para girar ↓</p>
+          </div>
         </div>
       </div>
 
@@ -348,7 +374,7 @@
         <div id="flor-contenido" class="absolute inset-0 z-10 pointer-events-none">
           <div class="h-full flex flex-col px-6 pt-20 md:pt-24 pb-6 max-w-6xl mx-auto w-full">
             <p class="eyebrow mb-3">02 · La que florece</p>
-            <h2 class="font-display font-light text-4xl md:text-6xl leading-tight">
+            <h2 class="font-display font-light text-4xl md:text-6xl leading-tight" data-split="words">
               Flor de <span class="italic text-ambar">Venezuela</span>
             </h2>
             <p class="mt-3 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">
@@ -437,29 +463,32 @@
     <!-- ================================================================
          ESCENA 03 · MANTO DE MARÍA — "La que cobija"
          ----------------------------------------------------------------
-         La foto real del Manto ocupa todo el escenario fijado y el scroll
-         hace zoom progresivo de acercamiento (close-up): escala 1 → 1.8
-         con un leve paneo. Las tarjetas desfilan por encima.
+         Escena FIJADA (pinned): el canvas 3D (manto3d.js) recrea el
+         monumento cinético real — miles de tubos de acero entre dos
+         torres. El scroll orbita la cámara: de lado es un bosque de
+         tubos abstracto; de frente, la Virgen se arma ante tus ojos.
+         Las tarjetas desfilan por encima.
          ================================================================ -->
     <section id="escena-manto" class="escena scroll-mt-20">
 
-      <div id="manto-stage" class="escena-stage">
-        <!-- Foto a sangre: el zoom del scroll la acerca sin mostrar bordes -->
-        <div class="absolute -inset-[12%]">
-          <img id="manto-foto" src="../assets/img/divina-pastora.jpg"
-               alt="Manto de María al atardecer, escultura cinética de la Divina Pastora entre dos torres"
-               class="w-full h-full object-cover" />
+      <div id="manto-stage" class="escena-stage bg-noche">
+        <!-- Manto cinético en 3D real a pantalla completa -->
+        <div id="manto3d-escena" class="absolute inset-0">
+          <canvas id="manto-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+          <div id="manto3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
+            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
+          </div>
         </div>
-        <!-- Velos para que el título y las tarjetas respiren -->
-        <div class="absolute inset-0 bg-gradient-to-t from-noche via-noche/10 to-noche/60"></div>
 
-        <div id="manto-contenido" class="relative z-10 h-full flex flex-col items-center justify-start px-6 pt-24 md:pt-28">
-          <p class="eyebrow mb-4">03 · La que cobija</p>
-          <h2 class="font-display font-light text-4xl md:text-6xl text-center leading-tight"
-              style="text-shadow: 0 4px 40px rgba(0,0,0,0.8);">
-            Manto de María <span class="italic text-ambar">· Divina Pastora</span>
-          </h2>
-          <p class="hint-manto mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Acércate con el scroll ↓</p>
+        <div id="manto-contenido" class="absolute inset-0 z-10 pointer-events-none">
+          <div class="h-full flex flex-col items-center px-6 pt-24 md:pt-28 text-center">
+            <p class="eyebrow mb-4">03 · La que cobija</p>
+            <h2 class="font-display font-light text-4xl md:text-6xl leading-tight" data-split="words"
+                style="text-shadow: 0 4px 40px rgba(0,0,0,0.8);">
+              Manto de María <span class="italic text-ambar">· Divina Pastora</span>
+            </h2>
+            <p class="hint-manto mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Baja: la Virgen se arma de frente ↓</p>
+          </div>
         </div>
       </div>
 
@@ -545,7 +574,7 @@
     <footer class="relative overflow-hidden">
       <div class="container-x py-24 md:py-32 text-center">
         <p class="eyebrow mb-6" data-reveal>El final del recorrido</p>
-        <h2 class="font-display font-light text-5xl md:text-7xl leading-tight" data-reveal>
+        <h2 class="font-display font-light text-5xl md:text-7xl leading-tight" data-split="words">
           Vive <span class="italic text-ambar">Barquisimeto</span>
         </h2>
         <p class="mt-6 max-w-xl mx-auto text-lg text-hueso/70 font-light leading-relaxed" data-reveal>
@@ -575,9 +604,13 @@
   <!-- GSAP + ScrollTrigger (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <!-- Lenis: scroll suave con inercia (aire Awwwards) -->
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
   <!-- Lógica general de la página -->
   <script src="js/main.js"></script>
-  <!-- Escena 3D (módulo ES: se carga diferido por naturaleza) -->
+  <!-- Escenas 3D (módulos ES: se cargan diferidos por naturaleza) -->
+  <script type="module" src="js/obelisco3d.js"></script>
   <script type="module" src="js/flor3d.js"></script>
+  <script type="module" src="js/manto3d.js"></script>
 </body>
 </html>
