@@ -43,5 +43,7 @@ Cada push a `main` redespliega.
 - Los datos históricos de cada monumento están en `site/index.html`; no inventar datos nuevos.
 - Las fotos de `assets/img/` son reales y verificadas. Las imágenes generadas
   con IA se descartaron porque no se parecían a los monumentos reales.
-- Los videos de `assets/video/` son generados con IA: revisar si se parecen
-  a los lugares reales antes de usarlos en un proyecto de cliente.
+- Los videos de `assets/video/` son generados con IA (Veo 3 Fast): se revisaron
+  el 25 Sep 2026 y muestran los monumentos con buena fidelidad
+  (Obelisco con su reloj en la redoma, Flor de 16 pétalos, Manto con las dos
+  torres y la Virgen tubular).
