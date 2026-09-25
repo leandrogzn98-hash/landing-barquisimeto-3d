@@ -2,16 +2,17 @@
 <!-- ============================================================================
   ÍCONOS DE LA CIUDAD CREPUSCULAR · Barquisimeto
   ----------------------------------------------------------------------------
-  Landing de prueba: muestra de landings profesionales con animaciones 3D.
+  Landing de venta inmersiva: tres escenas cinematográficas fijadas por
+  scroll (una por monumento) con tono persuasivo y CTA final.
   Stack: Tailwind (CDN) + GSAP/ScrollTrigger (CDN) + Three.js (CDN, módulos ES).
 
   Estructura del proyecto:
-    site/index.html      → esta página (contenido + secciones)
-    site/css/styles.css  → estilos propios (paleta, grano de cine, detalles)
-    site/js/main.js      → lógica general: navegación, animaciones GSAP, videos
+    site/index.html      → esta página (hero, intro, 3 escenas, video, footer)
+    site/css/styles.css  → estilos propios (paleta, grano, escenas fijadas)
+    site/js/main.js      → lógica general: nav, videos y escenas con ScrollTrigger
     site/js/flor3d.js    → escena Three.js: la Flor de Venezuela en 3D
 
-  Los assets viven en ../assets/... (imágenes y videos generados con IA).
+  Los assets viven en ../assets/... (fotos reales + videos generados con IA).
 ============================================================================= -->
 <html lang="es">
 <head>
@@ -78,6 +79,30 @@
       @apply mt-1 text-[0.7rem] uppercase tracking-[0.18em] text-hueso/50 leading-snug;
     }
 
+    /* Tarjeta de información de las escenas fijadas: MISMO estilo en las 3 */
+    .tarjeta-dato {
+      @apply w-full max-w-sm bg-carbon/85 backdrop-blur-md border border-ambar/25
+             rounded-2xl p-6 md:p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.9)];
+    }
+    .tarjeta-dato.izq { @apply mr-auto; }
+    .tarjeta-dato.der { @apply ml-auto; }
+    .tarjeta-kicker {
+      @apply text-ambar uppercase tracking-[0.3em] text-[0.65rem] font-medium;
+    }
+    .tarjeta-titulo {
+      @apply font-display font-light text-2xl md:text-3xl text-hueso mt-3 leading-tight;
+    }
+    .tarjeta-texto {
+      @apply mt-3 text-hueso/70 font-light leading-relaxed;
+    }
+
+    /* Mensaje de cierre persuasivo al final de cada escena */
+    .escena-cierre {
+      @apply font-display font-light italic text-3xl md:text-5xl leading-tight
+             text-hueso max-w-3xl mx-auto;
+      text-shadow: 0 4px 40px rgba(0,0,0,0.8);
+    }
+
     /* Botones */
     .btn-primary {
       @apply inline-block bg-ambar text-noche font-medium px-7 py-3.5 rounded-full
@@ -140,11 +165,12 @@
         BQTO <span class="text-ambar italic">· íconos</span>
       </a>
       <div class="hidden md:flex items-center gap-8 text-sm uppercase tracking-[0.2em] text-hueso/70">
-        <a href="#iconos" class="hover:text-ambar transition-colors">Íconos</a>
-        <a href="#flor3d" class="hover:text-ambar transition-colors">Flor 3D</a>
+        <a href="#escena-obelisco" class="hover:text-ambar transition-colors">Obelisco</a>
+        <a href="#escena-flor" class="hover:text-ambar transition-colors">Flor</a>
+        <a href="#escena-manto" class="hover:text-ambar transition-colors">Manto</a>
         <a href="#video" class="hover:text-ambar transition-colors">Video</a>
       </div>
-      <a href="#flor3d" class="md:hidden text-sm uppercase tracking-[0.2em] text-ambar">Ver 3D</a>
+      <a href="#escena-flor" class="md:hidden text-sm uppercase tracking-[0.2em] text-ambar">Ver 3D</a>
     </div>
   </nav>
 
@@ -169,8 +195,8 @@
         y el alma de Barquisimeto.
       </p>
       <div class="hero-fade mt-10 flex flex-wrap gap-4">
-        <a href="#iconos" class="btn-primary">Conocer los íconos</a>
-        <a href="#flor3d" class="btn-ghost">Ver la flor en 3D</a>
+        <a href="#escena-obelisco" class="btn-primary">Vivir la experiencia</a>
+        <a href="#escena-flor" class="btn-ghost">Ver la flor en 3D</a>
       </div>
     </div>
 
@@ -205,158 +231,290 @@
       </div>
     </section>
 
-    <!-- ======================= 01 · OBELISCO ======================= -->
-    <section id="obelisco" class="section-pad scroll-mt-20 bg-carbon/40">
-      <div class="container-x grid md:grid-cols-2 gap-12 md:gap-16 items-center">
-        <div class="img-marco order-1" data-reveal>
-          <img src="../assets/img/obelisco.jpg"
-               alt="Obelisco de Barquisimeto a contraluz, torre blanca de concreto con reloj"
-               class="w-full h-[420px] md:h-[540px] object-cover" loading="lazy" data-parallax />
-        </div>
-        <div class="order-2">
-          <p class="eyebrow mb-4" data-reveal>01 · El guardián</p>
-          <h2 class="font-display font-light text-4xl md:text-5xl leading-tight" data-reveal>
+    <!-- ================================================================
+         ESCENA 01 · OBELISCO — "El guardián y el sol"
+         ----------------------------------------------------------------
+         Escena FIJADA (pinned): el stage de 100vh se queda quieto en
+         pantalla (lo fija main.js con ScrollTrigger) mientras las
+         tarjetas desfilan por encima. El scroll también anima:
+           · el obelisco desciende y se achica levemente (scrub),
+           · el sol se desplaza detrás (scrub).
+         ================================================================ -->
+    <section id="escena-obelisco" class="escena scroll-mt-20">
+
+      <!-- Escenario fijado: cielo crepuscular + sol + obelisco centrado -->
+      <div id="obelisco-stage" class="escena-stage">
+        <div class="cielo-crepusculo" aria-hidden="true"></div>
+        <div id="obelisco-sol" class="sol" aria-hidden="true"></div>
+
+        <div class="relative z-10 h-full flex flex-col items-center justify-center px-6">
+          <p class="eyebrow mb-4">01 · El guardián</p>
+          <h2 class="font-display font-light text-4xl md:text-6xl text-center leading-tight">
             Obelisco de <span class="italic text-ambar">Barquisimeto</span>
           </h2>
-          <p class="mt-6 text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
-            Torre rectangular de concreto y acero que vigila la ciudad desde 1952.
-            Su gran reloj marcó el pulso del cuatricentenario y su mirador regala
-            la mejor vista del valle crepuscular.
-          </p>
-          <div class="mt-8 grid grid-cols-3 gap-4">
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="75" data-prefijo="~" data-sufijo=" m">~0 m</span></p>
-              <p class="stat-label">Altura</p>
-            </div>
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="1952">0</span></p>
-              <p class="stat-label">Inaugurado el 14 de septiembre</p>
-            </div>
-            <div class="stat-card" data-reveal>
-              <p class="stat-num text-2xl md:text-3xl pt-2">Reloj y mirador</p>
-              <p class="stat-label">Cuatricentenario de la ciudad</p>
-            </div>
+          <!-- La foto real del Obelisco: main.js la mece, la baja y la achica con el scroll -->
+          <div id="obelisco-marco" class="img-marco mt-8 w-[58vw] max-w-[280px] md:max-w-[330px]">
+            <img id="obelisco-foto" src="../assets/img/obelisco.jpg"
+                 alt="Obelisco de Barquisimeto a contraluz, torre blanca de concreto con reloj"
+                 class="w-full h-[44vh] md:h-[52vh] object-cover" />
           </div>
+          <p class="hint-obelisco mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Sigue bajando ↓</p>
         </div>
+      </div>
+
+      <!-- Tarjetas de información: aparecen alternando izquierda / derecha -->
+      <div class="escena-tarjetas">
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato izq" data-reveal>
+            <p class="tarjeta-kicker">Quién lo creó</p>
+            <h3 class="tarjeta-titulo">Un arquitecto, una constructora</h3>
+            <p class="tarjeta-texto">
+              Diseñado por el arquitecto mexicano-venezolano
+              <span class="text-hueso">Gustavo Gutiérrez-Otero y Rodríguez</span>
+              y levantado por la empresa Técnica Constructora, por mandato del
+              Ministerio de Obras Públicas.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato der" data-reveal>
+            <p class="tarjeta-kicker">Cuándo nació</p>
+            <h3 class="tarjeta-titulo">14 de septiembre de 1952</h3>
+            <p class="tarjeta-texto">
+              Inaugurado para el <span class="text-hueso">cuatricentenario de
+              Barquisimeto</span>: la ciudad cumplía 400 años y estrenaba guardián.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato izq" data-reveal>
+            <p class="tarjeta-kicker">El gigante</p>
+            <h3 class="tarjeta-titulo">~70–75 m de concreto y acero</h3>
+            <p class="tarjeta-texto">
+              Torre de base rectangular: en su época fue la estructura de ese
+              tipo <span class="text-hueso">más alta del país</span>.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato der" data-reveal>
+            <p class="tarjeta-kicker">Hoy</p>
+            <h3 class="tarjeta-titulo">Reloj y mirador</h3>
+            <p class="tarjeta-texto">
+              Su gran reloj sigue marcando el pulso de la ciudad y su mirador
+              regala <span class="text-hueso">la mejor vista del valle
+              crepuscular</span>.
+            </p>
+          </article>
+        </div>
+
+        <!-- Cierre persuasivo de la escena -->
+        <div class="tarjeta-wrap cierre-wrap">
+          <p class="escena-cierre" data-reveal>
+            “Más de siete décadas en pie, mirando el mismo atardecer.
+            <span class="text-ambar not-italic">Ven a verlo de cerca:</span>
+            el guardián te espera.”
+          </p>
+        </div>
+
       </div>
     </section>
 
-    <!-- ======================= 02 · FLOR DE VENEZUELA ======================= -->
-    <section id="flor" class="section-pad scroll-mt-20">
-      <div class="container-x grid md:grid-cols-2 gap-12 md:gap-16 items-center">
-        <div class="order-2 md:order-1">
-          <p class="eyebrow mb-4" data-reveal>02 · La que florece</p>
-          <h2 class="font-display font-light text-4xl md:text-5xl leading-tight" data-reveal>
+    <!-- ================================================================
+         ESCENA 02 · FLOR DE VENEZUELA — "La que florece"
+         ----------------------------------------------------------------
+         El canvas 3D ocupa el escenario fijado. El progreso del scroll
+         abre los pétalos de 0 a 1 y luego los vuelve a cerrar (0→1→0)
+         llamando a window.__flor3d.setApertura() en cada tick del scrub.
+         Los botones "Abrir/Cerrar" siguen funcionando: el scroll retoma
+         el control en cuanto te mueves.
+         ================================================================ -->
+    <section id="escena-flor" class="escena scroll-mt-20">
+
+      <div id="flor-stage" class="escena-stage bg-noche">
+        <div class="relative z-10 h-full flex flex-col px-6 pt-20 md:pt-24 pb-6 max-w-6xl mx-auto w-full">
+          <p class="eyebrow mb-3">02 · La que florece</p>
+          <h2 class="font-display font-light text-4xl md:text-6xl leading-tight">
             Flor de <span class="italic text-ambar">Venezuela</span>
           </h2>
-          <p class="mt-6 text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
-            Diseñada por <span class="text-hueso">Fruto Vivas</span> e inspirada en
-            la orquídea y los tepuyes. Sus 16 pétalos mecánicos se abren y cierran
-            como un organismo vivo: representó a Venezuela en Hannover 2000
-            y floreció en Barquisimeto en 2008.
+
+          <!-- Controles manuales de la flor (además del scroll) -->
+          <div class="mt-5 flex flex-wrap items-center gap-4">
+            <button id="btn-abrir" class="btn-primary" type="button">Abrir pétalos</button>
+            <button id="btn-cerrar" class="btn-ghost" type="button">Cerrar pétalos</button>
+            <label class="flex items-center gap-2 text-sm text-hueso/60 cursor-pointer select-none">
+              <input id="chk-auto" type="checkbox" checked class="accent-[#f2a33c] w-4 h-4" />
+              Movimiento automático
+            </label>
+          </div>
+
+          <!-- Lienzo 3D: flor3d.js dibuja aquí dentro -->
+          <div id="flor3d-escena" class="relative w-full flex-1 min-h-[300px] mt-5 rounded-3xl overflow-hidden border border-white/10 bg-noche">
+            <canvas id="flor3d-canvas" class="absolute inset-0 w-full h-full block"></canvas>
+            <div id="flor3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
+              <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
+            </div>
+            <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-[0.7rem] uppercase tracking-[0.3em] text-hueso/40 pointer-events-none">
+              El scroll abre y cierra la flor · arrastra para girar
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="escena-tarjetas">
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato izq" data-reveal>
+            <p class="tarjeta-kicker">El diseñador</p>
+            <h3 class="tarjeta-titulo">Fruto Vivas</h3>
+            <p class="tarjeta-texto">
+              El arquitecto venezolano la soñó como un organismo vivo,
+              <span class="text-hueso">no como un edificio</span>.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato der" data-reveal>
+            <p class="tarjeta-kicker">Ingeniería viva</p>
+            <h3 class="tarjeta-titulo">16 pétalos mecánicos</h3>
+            <p class="tarjeta-texto">
+              Se abren y se cierran de verdad: la estás viendo moverse
+              <span class="text-hueso">aquí mismo, en 3D</span>.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato izq" data-reveal>
+            <p class="tarjeta-kicker">Embajadora</p>
+            <h3 class="tarjeta-titulo">Hannover 2000</h3>
+            <p class="tarjeta-texto">
+              Representó a <span class="text-hueso">Venezuela ante el mundo</span>
+              en la Exposición Universal de Hannover.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato der" data-reveal>
+            <p class="tarjeta-kicker">En casa</p>
+            <h3 class="tarjeta-titulo">Barquisimeto, 2008</h3>
+            <p class="tarjeta-texto">
+              Desde 2008 florece en su tierra, al este de la ciudad.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato izq" data-reveal>
+            <p class="tarjeta-kicker">La inspiración</p>
+            <h3 class="tarjeta-titulo">Orquídea y tepuyes</h3>
+            <p class="tarjeta-texto">
+              La flor nacional y las montañas milenarias,
+              <span class="text-hueso">fundidas en acero</span>.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap cierre-wrap">
+          <p class="escena-cierre" data-reveal>
+            “Dieciséis pétalos que se abren como se abre Barquisimeto:
+            <span class="text-ambar not-italic">de par en par.</span>
+            Ven a verla florecer.”
           </p>
-          <div class="mt-8 grid grid-cols-3 gap-4">
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="16">0</span></p>
-              <p class="stat-label">Pétalos móviles</p>
-            </div>
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="2000">0</span></p>
-              <p class="stat-label">Hannover, representa a Venezuela</p>
-            </div>
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="2008">0</span></p>
-              <p class="stat-label">Florece en Barquisimeto</p>
-            </div>
-          </div>
-          <div class="mt-8" data-reveal>
-            <a href="#flor3d" class="btn-ghost">Manipularla en 3D ↓</a>
-          </div>
         </div>
-        <div class="img-marco order-1 md:order-2" data-reveal>
-          <img src="../assets/img/flor-de-venezuela.jpg"
-               alt="Flor de Venezuela de noche, estructura de 16 pétalos metálicos iluminada"
-               class="w-full h-[420px] md:h-[540px] object-cover" loading="lazy" data-parallax />
-        </div>
+
       </div>
     </section>
 
-    <!-- ======================= 03 · MANTO DE MARÍA ======================= -->
-    <section id="manto" class="section-pad scroll-mt-20 bg-carbon/40">
-      <div class="container-x grid md:grid-cols-2 gap-12 md:gap-16 items-center">
-        <div class="img-marco order-1" data-reveal>
-          <img src="../assets/img/divina-pastora.jpg"
+    <!-- ================================================================
+         ESCENA 03 · MANTO DE MARÍA — "La que cobija"
+         ----------------------------------------------------------------
+         La foto real del Manto ocupa todo el escenario fijado y el scroll
+         hace zoom progresivo de acercamiento (close-up): escala 1 → 1.8
+         con un leve paneo. Las tarjetas desfilan por encima.
+         ================================================================ -->
+    <section id="escena-manto" class="escena scroll-mt-20">
+
+      <div id="manto-stage" class="escena-stage">
+        <!-- Foto a sangre: el zoom del scroll la acerca sin mostrar bordes -->
+        <div class="absolute -inset-[12%]">
+          <img id="manto-foto" src="../assets/img/divina-pastora.jpg"
                alt="Manto de María al atardecer, escultura cinética de la Divina Pastora entre dos torres"
-               class="w-full h-[420px] md:h-[540px] object-cover" loading="lazy" data-parallax />
+               class="w-full h-full object-cover" />
         </div>
-        <div class="order-2">
-          <p class="eyebrow mb-4" data-reveal>03 · La que cobija</p>
-          <h2 class="font-display font-light text-4xl md:text-5xl leading-tight" data-reveal>
+        <!-- Velos para que el título y las tarjetas respiren -->
+        <div class="absolute inset-0 bg-gradient-to-t from-noche via-noche/10 to-noche/60"></div>
+
+        <div class="relative z-10 h-full flex flex-col items-center justify-start px-6 pt-24 md:pt-28">
+          <p class="eyebrow mb-4">03 · La que cobija</p>
+          <h2 class="font-display font-light text-4xl md:text-6xl text-center leading-tight"
+              style="text-shadow: 0 4px 40px rgba(0,0,0,0.8);">
             Manto de María <span class="italic text-ambar">· Divina Pastora</span>
           </h2>
-          <p class="mt-6 text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
-            Una imagen cinética de la Divina Pastora tejida con 522 líneas
-            tubulares y 3.772 piezas, suspendida entre dos torres sobre la colina.
-            Inaugurada en 2016: el manto que arropa a la ciudad.
-          </p>
-          <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="63" data-sufijo=" m">0 m</span></p>
-              <p class="stat-label">El conjunto</p>
-            </div>
-            <div class="stat-card" data-reveal>
-              <p class="stat-num text-xl md:text-2xl pt-3">47,14 × 23,3 m</p>
-              <p class="stat-label">La imagen cinética</p>
-            </div>
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="3772">0</span></p>
-              <p class="stat-label">Piezas · 522 líneas</p>
-            </div>
-            <div class="stat-card" data-reveal>
-              <p class="stat-num"><span data-contador="2016">0</span></p>
-              <p class="stat-label">Inaugurado el 13 de enero</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ======================= FLOR 3D INTERACTIVA ======================= -->
-    <section id="flor3d" class="section-pad scroll-mt-20 relative overflow-hidden">
-      <div class="container-x">
-        <p class="eyebrow mb-4" data-reveal>Interactivo · Three.js</p>
-        <h2 class="font-display font-light text-4xl md:text-6xl leading-tight" data-reveal>
-          La flor, <span class="italic text-ambar">en tus manos</span>
-        </h2>
-        <p class="mt-6 max-w-2xl text-hueso/70 font-light leading-relaxed text-lg" data-reveal>
-          Arrastra para girar alrededor de ella y usa la rueda o dos dedos para
-          acercar. Abre y cierra sus 16 pétalos: cada uno fue modelado con código,
-          sin ningún programa de 3D.
-        </p>
-
-        <!-- Controles de la escena 3D -->
-        <div class="mt-8 flex flex-wrap items-center gap-4" data-reveal>
-          <button id="btn-abrir" class="btn-primary" type="button">Abrir pétalos</button>
-          <button id="btn-cerrar" class="btn-ghost" type="button">Cerrar pétalos</button>
-          <label class="flex items-center gap-2 text-sm text-hueso/60 cursor-pointer select-none">
-            <input id="chk-auto" type="checkbox" checked class="accent-[#f2a33c] w-4 h-4" />
-            Movimiento automático
-          </label>
+          <p class="hint-manto mt-6 text-hueso/60 text-[0.7rem] uppercase tracking-[0.3em]">Acércate con el scroll ↓</p>
         </div>
       </div>
 
-      <!-- Lienzo 3D: flor3d.js dibuja aquí dentro -->
-      <div class="container-x mt-8" data-reveal>
-        <div id="flor3d-escena" class="relative w-full h-[70vh] min-h-[420px] rounded-3xl overflow-hidden border border-white/10 bg-noche">
-          <canvas id="flor3d-canvas" class="absolute inset-0 w-full h-full block"></canvas>
-          <!-- Mensaje de respaldo si WebGL no está disponible -->
-          <div id="flor3d-error" class="hidden absolute inset-0 items-center justify-center text-center p-8 text-hueso/60">
-            <p>Tu navegador no pudo iniciar WebGL.<br />Prueba con una versión reciente de Chrome, Edge, Firefox o Safari.</p>
-          </div>
-          <p class="absolute bottom-4 left-1/2 -translate-x-1/2 text-[0.7rem] uppercase tracking-[0.3em] text-hueso/40 pointer-events-none">
-            Arrastra para girar
+      <div class="escena-tarjetas">
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato izq" data-reveal>
+            <p class="tarjeta-kicker">La escala</p>
+            <h3 class="tarjeta-titulo">63 metros de conjunto</h3>
+            <p class="tarjeta-texto">
+              Dos torres que <span class="text-hueso">sostienen el cielo</span>
+              de la colina.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato der" data-reveal>
+            <p class="tarjeta-kicker">La imagen</p>
+            <h3 class="tarjeta-titulo">47,14 × 23,3 m</h3>
+            <p class="tarjeta-texto">
+              Una Virgen <span class="text-hueso">cinética</span>: se arma y se
+              desarma según desde dónde la mires.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato izq" data-reveal>
+            <p class="tarjeta-kicker">El tejido</p>
+            <h3 class="tarjeta-titulo">522 líneas · 3.772 piezas</h3>
+            <p class="tarjeta-texto">
+              Tubos de acero que dibujan a la Divina Pastora
+              <span class="text-hueso">en el aire</span>.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap">
+          <article class="tarjeta-dato der" data-reveal>
+            <p class="tarjeta-kicker">La fecha</p>
+            <h3 class="tarjeta-titulo">13 de enero de 2016</h3>
+            <p class="tarjeta-texto">
+              Inaugurado como <span class="text-hueso">el manto que arropa</span>
+              a toda la ciudad.
+            </p>
+          </article>
+        </div>
+
+        <div class="tarjeta-wrap cierre-wrap">
+          <p class="escena-cierre" data-reveal>
+            “Tres mil setecientas setenta y dos piezas sosteniendo una sola
+            mirada. <span class="text-ambar not-italic">El manto está abierto:
+            entra.</span>”
           </p>
         </div>
+
       </div>
     </section>
 
@@ -381,11 +539,21 @@
       </div>
     </section>
 
-    <!-- ======================= CIERRE ======================= -->
+    <!-- ======================= CIERRE + CTA ======================= -->
     <footer class="relative overflow-hidden">
       <div class="container-x py-24 md:py-32 text-center">
-        <p class="eyebrow mb-6" data-reveal>Barquisimeto · Ciudad crepuscular</p>
-        <p class="font-display font-light italic text-3xl md:text-5xl leading-tight max-w-3xl mx-auto" data-reveal>
+        <p class="eyebrow mb-6" data-reveal>El final del recorrido</p>
+        <h2 class="font-display font-light text-5xl md:text-7xl leading-tight" data-reveal>
+          Vive <span class="italic text-ambar">Barquisimeto</span>
+        </h2>
+        <p class="mt-6 max-w-xl mx-auto text-lg text-hueso/70 font-light leading-relaxed" data-reveal>
+          Tres íconos. Una ciudad. Tu próxima historia empieza
+          bajo el cielo crepuscular.
+        </p>
+        <div class="mt-10" data-reveal>
+          <a href="#inicio" class="btn-primary">Empezar de nuevo ↑</a>
+        </div>
+        <p class="mt-16 font-display font-light italic text-2xl md:text-4xl leading-tight max-w-3xl mx-auto text-hueso/80" data-reveal>
           “Tres gigantes. Una sola <span class="text-ambar not-italic">identidad</span>.”
         </p>
         <p class="mt-8 text-hueso/50 font-light" data-reveal>
